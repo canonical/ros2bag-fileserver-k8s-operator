@@ -1,0 +1,32 @@
+name: ros2-database
+assumes:
+  - k8s-api
+summary: |
+  Robotics data fileserver storage
+
+description: |
+  Robotics data fileserver storage with Caddy
+
+containers:
+  ros2-database:
+    resource: caddy-fileserver-image
+    mounts:
+      - storage: database
+        location: /var/lib/caddy-fileserver
+
+storage:
+  database:
+    type: filesystem
+
+resources:
+  caddy-fileserver-image:
+    type: oci-image
+    description: upstream docker image for Caddy
+    upstream-source: docker.io/caddy/caddy:2.5.2-alpine
+
+requires:
+  ingress:
+    interface: traefik_route
+    limit: 1
+  catalogue:
+    interface: catalogue
