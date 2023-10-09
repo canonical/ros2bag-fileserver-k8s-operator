@@ -15,7 +15,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-"""A kubernetes charm for storing robotics bag files"""
+"""A kubernetes charm for storing robotics bag files."""
 
 import logging
 
@@ -71,7 +71,9 @@ class Ros2bagFileserverCharm(CharmBase):
                 name="ros2bag fileserver",
                 icon="graph-line-variant",
                 url=self.external_url + "/",
-                description=("ROS 2 bag fileserver to store robotics data for visualization in Foxglove studio."),
+                description=(
+                    "ROS 2 bag fileserver to store robotics data for visualization in Foxglove studio."
+                ),
             ),
         )
 
@@ -97,23 +99,24 @@ class Ros2bagFileserverCharm(CharmBase):
 
     def _update_layer_and_restart(self, event) -> None:
         """Define and start a workload using the Pebble API."""
-        # Learn more about statuses in the SDK docs:
-        # https://juju.is/docs/sdk/constructs#heading--statuses
-
         self.unit.status = MaintenanceStatus("Assembling pod spec")
         if self.container.can_connect():
             new_layer = self._pebble_layer.to_dict()
 
-            caddyfile_config = self._generate_caddyfile_config()
-            try:
-                self.container.push('/srv/Caddyfile', caddyfile_config, permissions=0o777)
-                logger.info(
-                    "Pushed caddyfile"
-                )
-            except ConnectionError:
-                logger.error(
-                    "Could not push datasource config. Pebble refused connection. Shutting down?"
-                )
+            if not self.container.exists("/srv/Caddyfile"):
+                current_caddyfile_config = self._generate_caddyfile_config()
+                try:
+                    self.container.push(
+                        "/srv/Caddyfile",
+                        current_caddyfile_config,
+                        permissions=0o777,
+                        make_dirs=True,
+                    )
+                    logger.info("Pushed caddyfile")
+                except ConnectionError:
+                    logger.error(
+                        "Could not push datasource config. Pebble refused connection. Shutting down?"
+                    )
 
             # Get the current pebble layer config
             services = self.container.get_plan().to_dict().get("services", {})
@@ -163,7 +166,7 @@ class Ros2bagFileserverCharm(CharmBase):
             path_prefix = f"{self.model.name}-{self.model.app.name}"
             return f"{self._scheme}://{self.ingress.external_host}/{path_prefix}"
         return self.internal_url
-    
+
     @property
     def _ingress_config(self) -> dict:
         """Build a raw ingress configuration for Traefik."""
@@ -175,7 +178,7 @@ class Ros2bagFileserverCharm(CharmBase):
                 "redirectRegex": {
                     "regex": [f"^(.*)\\/{external_path}$"],
                     "replacement": [f"/{external_path}/"],
-                    "permanent": False,
+                    "permanent": True,
                 }
             },
             f"juju-sidecar-noprefix-{self.model.name}-{self.model.app.name}": {
@@ -217,15 +220,8 @@ class Ros2bagFileserverCharm(CharmBase):
     @property
     def _pebble_layer(self):
         """Return a dictionary representing a Pebble layer."""
+        command = " ".join(["caddy", "run", "/srv/Caddyfile"])
 
-        command = " ".join(
-            [
-                "caddy",
-                "run",
-                "/srv/Caddyfile"
-            ]
-        )
-    
         pebble_layer = Layer(
             {
                 "summary": "ros2bag fileserver k8s layer",
@@ -242,6 +238,7 @@ class Ros2bagFileserverCharm(CharmBase):
         )
 
         return pebble_layer
+
 
 if __name__ == "__main__":  # pragma: nocover
     main(Ros2bagFileserverCharm)  # type: ignore
