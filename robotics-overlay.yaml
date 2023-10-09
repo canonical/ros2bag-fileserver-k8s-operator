@@ -1,0 +1,26 @@
+---
+applications:
+  foxglove-studio:
+    charm: ./foxglove-studio_ubuntu-22.04-amd64.charm
+    series: jammy
+    resources:
+      foxglove-studio-image: ghcr.io/foxglove/studio:1.68
+    scale: 1
+    options:
+      server-port: 8080
+    constraints: arch=amd64
+  ros2-database:
+    charm: ./ros2-database_ubuntu-22.04-amd64.charm
+    series: jammy
+    resources:
+      caddy-fileserver-image: docker.io/caddy/caddy:2.5.2-alpine
+    scale: 1
+    constraints: arch=amd64
+relations:
+  - [foxglove-studio:ingress, traefik:traefik-route]
+  - [foxglove-studio:catalogue, catalogue:catalogue]
+  - [ros2-database:ingress, traefik:traefik-route]
+  - [ros2-database:catalogue, catalogue:catalogue]
+
+
+## steps are to clone the 2 repositories for foxglove and ros2 whatever. Pack the 2 charm. Deploy cos-lite with overlay

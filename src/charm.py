@@ -40,12 +40,12 @@ logger = logging.getLogger(__name__)
 VALID_LOG_LEVELS = ["info", "debug", "warning", "error", "critical"]
 
 
-class Ros2DatabaseCharmCharm(CharmBase):
+class Ros2bagFileserverCharm(CharmBase):
     """Charm the service."""
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.name = "ros2-database"
+        self.name = "ros2bag-fileserver"
 
         self.container = self.unit.get_container(self.name)
         self.caddyfile_config = ""
@@ -56,22 +56,22 @@ class Ros2DatabaseCharmCharm(CharmBase):
         self.framework.observe(self.on.config_changed, self._configure_ingress)
 
         self.framework.observe(
-            self.on.ros2_database_pebble_ready, self._update_layer_and_restart
+            self.on.ros2bag_fileserver_pebble_ready, self._update_layer_and_restart
         )
 
         self.catalog = CatalogueConsumer(
             charm=self,
             refresh_event=[
-                self.on.ros2_database_pebble_ready,
+                self.on.ros2bag_fileserver_pebble_ready,
                 self.ingress.on.ready,
                 self.on["ingress"].relation_broken,
                 self.on.config_changed,
             ],
             item=CatalogueItem(
-                name="ros2 database",
+                name="ros2bag fileserver",
                 icon="graph-line-variant",
                 url=self.external_url + "/",
-                description=("ROS 2 database stores robotics data for visualization in Foxglove studio."),
+                description=("ROS 2 bag fileserver to store robotics data for visualization in Foxglove studio."),
             ),
         )
 
@@ -120,7 +120,7 @@ class Ros2DatabaseCharmCharm(CharmBase):
             if services != new_layer["services"]:  # pyright: ignore
                 self.container.add_layer(self.name, self._pebble_layer, combine=True)
 
-                logger.info("Added updated layer 'ros2 database' to Pebble plan")
+                logger.info("Added updated layer 'ros2bag fileserver' to Pebble plan")
 
                 self.container.restart(self.name)
                 logger.info(f"Restarted '{self.name}' service")
@@ -228,12 +228,12 @@ class Ros2DatabaseCharmCharm(CharmBase):
     
         pebble_layer = Layer(
             {
-                "summary": "ROS 2 database k8s layer",
-                "description": "ROS 2 database k8s layer",
+                "summary": "ros2bag fileserver k8s layer",
+                "description": "ros2bag fileserver k8s layer",
                 "services": {
                     self.name: {
                         "override": "replace",
-                        "summary": "ros2-database-k8s service",
+                        "summary": "ros2bag-fileserver-k8s service",
                         "command": command,
                         "startup": "enabled",
                     }
@@ -244,4 +244,4 @@ class Ros2DatabaseCharmCharm(CharmBase):
         return pebble_layer
 
 if __name__ == "__main__":  # pragma: nocover
-    main(Ros2DatabaseCharmCharm)  # type: ignore
+    main(Ros2bagFileserverCharm)  # type: ignore

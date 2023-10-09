@@ -1,4 +1,4 @@
-name: ros2-database
+name: ros2bag-fileserver
 assumes:
   - k8s-api
 summary: |
@@ -8,7 +8,7 @@ description: |
   Robotics data fileserver storage with Caddy
 
 containers:
-  ros2-database:
+  ros2bag-fileserver:
     resource: caddy-fileserver-image
     mounts:
       - storage: database
