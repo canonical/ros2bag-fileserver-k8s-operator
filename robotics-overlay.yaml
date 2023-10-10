@@ -17,7 +17,7 @@ applications:
     scale: 1
     constraints: arch=amd64
     storage:
-      database: 1G
+      database: 10G
 
 relations:
   - [foxglove-studio:ingress, traefik:traefik-route]

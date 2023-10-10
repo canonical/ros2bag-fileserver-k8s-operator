@@ -5,7 +5,8 @@ summary: |
   Robotics data fileserver storage
 
 description: |
-  Robotics data fileserver storage with Caddy
+  ros2bag data fileserver storage. The fileserver is served with Caddy and it is
+  meant to be used with the COS lite stack and the Foxglove studio charm. 
 
 containers:
   ros2bag-fileserver:
