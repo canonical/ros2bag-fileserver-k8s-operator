@@ -6,7 +6,7 @@ Ros2bag fileserver charm is a charm that deploys a Caddy fileserver to store ros
 
 The charm is still under development and is not available yet on CharmHub.
 
-The deployment assumes that a Juju model is deployed with microk8s.
+The deployment assumes that a Juju model is deployed with microk8s. Instructions on how to set up microk8s with Juju are available [here](https://juju.is/docs/sdk/set-up-your-development-environment#heading--install-microk8s).
 
 To deploy the local charm follow these instructions:
 
@@ -73,9 +73,10 @@ To deploy with COS lite bundle follow these instructions:
   ```
   juju deploy cos-lite --trust --overlay ./robotics-overlay.yaml
   ```
-  NB. this bundle is in development and attempts to deploy the foxglove-studio-k8s charm. Before deploying make sure to have the charm in the ros2bag-fileserver-k8s folder. You can create the charm by following the instructions at 
+  NB. this bundle is in development and attempts to deploy the foxglove-studio-k8s charm. Before deploying make sure to have the charm in the ros2bag-fileserver-k8s folder. You can create the charm by following the instructions at [foxglove-k8s-operator repository](https://github.com/ubuntu-robotics/foxglove-k8s-operator.git).
 
-- The ros2bag fileserver charm will be available in your browser at [foxglove-k8s-operator repository](https://github.com/ubuntu-robotics/foxglove-k8s-operator.git)
+
+  Once deployed the ros2bag-fileserver charm will be accessible via traefik at the following link:
 
   ```
   http://traefik-virtual-ip/<juju-model-name>-ros2bag-fileserver/
