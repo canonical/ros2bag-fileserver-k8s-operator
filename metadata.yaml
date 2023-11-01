@@ -1,0 +1,33 @@
+name: ros2bag-fileserver
+assumes:
+  - k8s-api
+summary: |
+  Robotics data fileserver storage
+
+description: |
+  ros2bag data fileserver storage. The fileserver is served with Caddy and it is
+  meant to be used with the COS lite stack and the Foxglove studio charm. 
+
+containers:
+  ros2bag-fileserver:
+    resource: caddy-fileserver-image
+    mounts:
+      - storage: database
+        location: /var/lib/caddy-fileserver
+
+storage:
+  database:
+    type: filesystem
+
+resources:
+  caddy-fileserver-image:
+    type: oci-image
+    description: upstream docker image for Caddy
+    upstream-source: docker.io/caddy/caddy:2.5.2-alpine
+
+requires:
+  ingress:
+    interface: traefik_route
+    limit: 1
+  catalogue:
+    interface: catalogue
