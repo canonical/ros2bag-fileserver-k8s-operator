@@ -41,6 +41,8 @@ VALID_LOG_LEVELS = ["info", "debug", "warning", "error", "critical"]
 
 
 class Ros2bagFileserverCharm(CharmBase):
+    """Charm to run a ROS 2 bag fileserver on Kubernetes."""
+
     def __init__(self, *args):
         super().__init__(*args)
         self.name = "ros2bag-fileserver"
@@ -69,9 +71,7 @@ class Ros2bagFileserverCharm(CharmBase):
                 name="ros2bag fileserver",
                 icon="graph-line-variant",
                 url=self.external_url + "/",
-                description=(
-                    "ROS 2 bag fileserver to store robotics data."
-                ),
+                description=("ROS 2 bag fileserver to store robotics data."),
             ),
         )
 

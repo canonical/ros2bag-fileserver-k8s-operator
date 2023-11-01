@@ -1,6 +1,6 @@
 # Ros2bag Fileserver Operator (k8s)
 
-Ros2bag fileserver charm is a charm that deploys a Caddy fileserver to store ros2bag files. It can be used in conjuction with the Foxglove Studio charm and COS-lite.
+Ros2bag fileserver charm is a charm that deploys a Caddy fileserver to store ros2bag files. It can be used together with the Foxglove Studio charm and COS-lite.
 
 ## Basic Deployment
 
