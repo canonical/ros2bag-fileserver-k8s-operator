@@ -99,9 +99,9 @@ class TestCharm(unittest.TestCase):
                     },
                     "juju-sidecar-trailing-slash-handler-testmodel-ros2bag-fileserver": {
                         "redirectRegex": {
-                            "permanent": True,
-                            "regex": ["^(.*)\/testmodel-ros2bag-fileserver$"],  # noqa
-                            "replacement": ["/testmodel-ros2bag-fileserver/"],
+                            "permanent": False,
+                            "regex": "^(.*)\/testmodel-ros2bag-fileserver$",  # noqa
+                            "replacement": "/testmodel-ros2bag-fileserver/",
                         }
                     },
                 },
