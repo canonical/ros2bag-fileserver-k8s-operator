@@ -1,1 +1,7 @@
-ops ~= 2.4
+ops ~= 2.8
+
+# Handle merging of nested data structures in python.
+# Code: https://github.com/toumorokoshi/deepmerge
+# Docs: https://deepmerge.readthedocs.io/en/latest/
+# Deps: charm
+jsonschema

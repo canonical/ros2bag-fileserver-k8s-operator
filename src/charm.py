@@ -26,13 +26,24 @@ from ops.charm import (
 )
 
 from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
-from ops.pebble import Layer, ConnectionError
+from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus, OpenedPort, ModelError
+from ops.pebble import Layer, ConnectionError, ExecError
 
-from charms.traefik_route_k8s.v0.traefik_route import TraefikRouteRequirer
+
 from charms.catalogue_k8s.v0.catalogue import CatalogueConsumer, CatalogueItem
 import socket
+from charms.traefik_k8s.v1.ingress_per_unit import (
+    IngressPerUnitReadyForUnitEvent,
+    IngressPerUnitRequirer,
+)
 
+from charms.traefik_k8s.v2.ingress import (
+    IngressPerAppReadyEvent,
+    IngressPerAppRequirer,
+)
+
+
+from urllib.parse import urlparse
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -49,12 +60,26 @@ class Ros2bagFileserverCharm(CharmBase):
 
         self.container = self.unit.get_container(self.name)
         self.caddyfile_config = ""
-        self.ingress = TraefikRouteRequirer(self, self.model.get_relation("ingress"), "ingress")  # type: ignore
-        self.framework.observe(self.on["ingress"].relation_joined, self._configure_ingress)
-        self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
-        self.framework.observe(self.on.leader_elected, self._configure_ingress)
-        self.framework.observe(self.on.config_changed, self._configure_ingress)
+        self.set_ports()
 
+        self.ingress_http = IngressPerAppRequirer(
+            self,
+            relation_name="ingress-http",
+            strip_prefix=True,
+            port=80,
+        )
+
+        self.ingress_tcp = IngressPerUnitRequirer(
+            self,
+            relation_name="ingress-tcp",
+            port=self.config["ssh-port"],
+            mode="tcp",
+        )
+
+        self.framework.observe(self.ingress_tcp.on.ready_for_unit, self._on_ingress_ready_tcp)
+        self.framework.observe(self.ingress_http.on.ready, self._on_ingress_ready_http)
+
+        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(
             self.on.ros2bag_fileserver_pebble_ready, self._update_layer_and_restart
         )
@@ -63,43 +88,45 @@ class Ros2bagFileserverCharm(CharmBase):
             charm=self,
             refresh_event=[
                 self.on.ros2bag_fileserver_pebble_ready,
-                self.ingress.on.ready,
-                self.on["ingress"].relation_broken,
+                self.ingress_http.on.ready,
+                self.on["ingress-http"].relation_broken,
                 self.on.config_changed,
             ],
             item=CatalogueItem(
                 name="ros2bag fileserver",
                 icon="graph-line-variant",
-                url=self.external_url + "/",
+                url=self.external_url,
                 description=("ROS 2 bag fileserver to store robotics data."),
             ),
         )
 
-    def _on_ingress_ready(self, _) -> None:
-        """Once Traefik tells us our external URL, make sure we reconfigure the charm."""
-        self._update_layer_and_restart(None)
+    def _on_ingress_ready_tcp(self, event: IngressPerUnitReadyForUnitEvent):
+        logger.info("Ingress for unit ready on '%s'", event.url)
+        self._update_layer_and_restart(event)
 
-    def _configure_ingress(self, event: HookEvent) -> None:
-        """Set up ingress if a relation is joined, config changed, or a new leader election."""
-        if not self.unit.is_leader():
-            return
+    def _on_ingress_ready_http(self, event: IngressPerAppReadyEvent):
+        logger.info("Ingress for unit ready on '%s'", event.url)
+        self._update_layer_and_restart(event)
 
-        # If it's a RelationJoinedEvent, set it in the ingress object
-        if isinstance(event, RelationJoinedEvent):
-            self.ingress._relation = event.relation
+    def _on_install(self, _):
+        """Handler for the "install" event during which we will update the K8s service."""
+        self.set_ports()
 
-        # No matter what, check readiness -- this blindly checks whether `ingress._relation` is not
-        # None, so it overlaps a little with the above, but works as expected on leader elections
-        # and config-change
-        if self.ingress.is_ready():
-            self._update_layer_and_restart(None)
-            self.ingress.submit_to_traefik(self._ingress_config)
-
-    def _update_layer_and_restart(self, event) -> None:
+    def _update_layer_and_restart(self, _) -> None:
         """Define and start a workload using the Pebble API."""
         self.unit.status = MaintenanceStatus("Assembling pod spec")
+
+        self.ingress_tcp.provide_ingress_requirements(
+            scheme=urlparse(self.internal_url).scheme, port=self.config["ssh-port"]
+        )
+        self.ingress_http.provide_ingress_requirements(
+            scheme=urlparse(self.internal_url).scheme, port=80
+        )
+
         if self.container.can_connect():
             new_layer = self._pebble_layer.to_dict()
+
+            self._install_ssh_server()
 
             if not self.container.exists("/srv/Caddyfile"):
                 current_caddyfile_config = self._generate_caddyfile_config()
@@ -129,6 +156,25 @@ class Ros2bagFileserverCharm(CharmBase):
         else:
             self.unit.status = WaitingStatus("Waiting for Pebble in workload container")
 
+    def set_ports(self):
+        """Open necessary (and close no longer needed) workload ports."""
+        planned_ports = (
+            {OpenedPort("tcp", int(self.config["ssh-port"]))}
+            if self.unit.is_leader()
+            else set()
+        )
+
+        actual_ports = self.unit.opened_ports()
+
+        # Ports may change across an upgrade, so need to sync
+        ports_to_close = actual_ports.difference(planned_ports)
+        for p in ports_to_close:
+            self.unit.close_port(p.protocol, p.port)
+
+        new_ports_to_open = planned_ports.difference(actual_ports)
+        for p in new_ports_to_open:
+            self.unit.open_port(p.protocol, p.port)
+
     def _generate_caddyfile_config(self) -> str:
         config = """:80 {
             # Set this path to your site's directory.
@@ -148,6 +194,26 @@ class Ros2bagFileserverCharm(CharmBase):
         }"""
         return config
 
+    def _install_ssh_server(self):
+        try:
+            self.container.exec(["apk", "add", "openssh"]).wait()
+            self.container.exec(['sed', '-i', 's/#Port 22/Port 2222/', '/etc/ssh/sshd_config'])
+            self.container.exec(["apk", "add", "openrc", "--no-cache"]).wait()
+            self.container.exec(["apk", "add", "rsync"]).wait()
+            self.container.exec(["rc-update", "add", "sshd"]).wait()
+            self.container.exec(["ssh-keygen", "-A"]).wait()
+            self.container.exec(["rc-status"]).wait()
+            config = """"""
+            self.container.push(
+                            "/run/openrc/softlevel",
+                            config,
+                            permissions=0o777,
+                            make_dirs=True,
+                        )
+            self.container.exec(["/etc/init.d/sshd", "start"]).wait()
+        except ExecError as e:
+            print(f"Error: {e}")
+
     @property
     def _scheme(self) -> str:
         return "http"
@@ -159,61 +225,21 @@ class Ros2bagFileserverCharm(CharmBase):
 
     @property
     def external_url(self) -> str:
-        """Return the external hostname configured, if any."""
-        if self.ingress.external_host:
-            path_prefix = f"{self.model.name}-{self.model.app.name}"
-            return f"{self._scheme}://{self.ingress.external_host}/{path_prefix}"
+        """Return the external hostname to be passed to ingress via the relation.
+
+        If we do not have an ingress, then use the pod ip as hostname.
+        The reason to prefer this over the pod name (which is the actual
+        hostname visible from the pod) or a K8s service, is that those
+        are routable virtually exclusively inside the cluster (as they rely)
+        on the cluster's DNS service, while the ip address is _sometimes_
+        routable from the outside, e.g., when deploying on MicroK8s on Linux.
+        """
+        try:
+            if ingress_url := self.ingress_http.url:
+                return ingress_url
+        except ModelError as e:
+            logger.error("Failed obtaining external url: %s. Shutting down?", e)
         return self.internal_url
-
-    @property
-    def _ingress_config(self) -> dict:
-        """Build a raw ingress configuration for Traefik."""
-        # The path prefix is the same as in ingress per app
-        external_path = f"{self.model.name}-{self.model.app.name}"
-
-        middlewares = {
-            f"juju-sidecar-trailing-slash-handler-{self.model.name}-{self.model.app.name}": {
-                "redirectRegex": {
-                    "regex": f"^(.*)\\/{external_path}$",
-                    "replacement": f"/{external_path}/",
-                    "permanent": False,
-                }
-            },
-            f"juju-sidecar-noprefix-{self.model.name}-{self.model.app.name}": {
-                "stripPrefix": {"forceSlash": False, "prefixes": [f"/{external_path}"]},
-            },
-        }
-
-        routers = {
-            "juju-{}-{}-router".format(self.model.name, self.model.app.name): {
-                "entryPoints": ["web"],
-                "rule": f"PathPrefix(`/{external_path}`)",
-                "middlewares": list(middlewares.keys()),
-                "service": "juju-{}-{}-service".format(self.model.name, self.app.name),
-            },
-            "juju-{}-{}-router-tls".format(self.model.name, self.model.app.name): {
-                "entryPoints": ["websecure"],
-                "rule": f"PathPrefix(`/{external_path}`)",
-                "middlewares": list(middlewares.keys()),
-                "service": "juju-{}-{}-service".format(self.model.name, self.app.name),
-                "tls": {
-                    "domains": [
-                        {
-                            "main": self.ingress.external_host,
-                            "sans": [f"*.{self.ingress.external_host}"],
-                        },
-                    ],
-                },
-            },
-        }
-
-        services = {
-            "juju-{}-{}-service".format(self.model.name, self.model.app.name): {
-                "loadBalancer": {"servers": [{"url": self.internal_url}]}
-            }
-        }
-
-        return {"http": {"routers": routers, "services": services, "middlewares": middlewares}}
 
     @property
     def _pebble_layer(self):
