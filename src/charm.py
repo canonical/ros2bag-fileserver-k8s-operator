@@ -192,9 +192,17 @@ class Ros2bagFileserverCharm(CharmBase):
         return config
 
     def _install_ssh_server(self):
+        """Install the openssh server and the rsync server.
+
+        This is temporary, in the future we should use a custom OCI image
+        that will have prebaked ssh server and rsync installed.
+        """
+        ssh_port = self.config["ssh-port"]
         try:
             self.container.exec(["apk", "add", "openssh"]).wait()
-            self.container.exec(["sed", "-i", "s/#Port 22/Port 2222/", "/etc/ssh/sshd_config"])
+            self.container.exec(
+                ["sed", "-i", f"s/#Port 22/Port {ssh_port}/", "/etc/ssh/sshd_config"]
+            )
             self.container.exec(["apk", "add", "openrc", "--no-cache"]).wait()
             self.container.exec(["apk", "add", "rsync"]).wait()
             self.container.exec(["rc-update", "add", "sshd"]).wait()
