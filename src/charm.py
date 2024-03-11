@@ -29,7 +29,6 @@ from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus, OpenedPort, ModelError
 from ops.pebble import Layer, ConnectionError, ExecError
 
-
 from charms.catalogue_k8s.v0.catalogue import CatalogueConsumer, CatalogueItem
 import socket
 from charms.traefik_k8s.v1.ingress_per_unit import (
@@ -42,8 +41,9 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppRequirer,
 )
 
-
+from charms.devices_pub_keys_manager_k8s.v0.devices_pub_keys import DevicesKeysConsumer
 from urllib.parse import urlparse
+import ast
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -84,6 +84,13 @@ class Ros2bagFileserverCharm(CharmBase):
             self.on.ros2bag_fileserver_pebble_ready, self._update_layer_and_restart
         )
 
+        # -- device_keys relation observations
+        self.devices_keys_consumer = DevicesKeysConsumer(self)
+        self.framework.observe(
+            self.devices_keys_consumer.on.devices_keys_changed,  # pyright: ignore
+            self._on_devices_keys_changed,
+        )
+
         self.catalog = CatalogueConsumer(
             charm=self,
             refresh_event=[
@@ -99,6 +106,31 @@ class Ros2bagFileserverCharm(CharmBase):
                 description=("ROS 2 bag fileserver to store robotics data."),
             ),
         )
+
+    def _on_devices_keys_changed(self, event) -> None:
+        self._update_devices_public_keys(event)
+
+    def _update_devices_public_keys(self, event) -> None:
+        container = self.unit.get_container(self.name)
+
+        if not container.can_connect():
+            logger.debug("Cannot connect to Pebble yet, deferring event")
+            event.defer()
+            return
+
+        devices_pub_keys_dict = ast.literal_eval(self.devices_keys_consumer._stored.devices_pub_keys)
+
+        pub_keys_list = ""
+
+        for value in devices_pub_keys_dict["ssh_keys"].values():
+            pub_keys_list += value + "\n"
+
+        self.container.push(
+                        "/root/.ssh/authorized_keys",
+                        pub_keys_list,
+                        permissions=0o777,
+                        make_dirs=True,
+                    )
 
     def _on_ingress_ready_tcp(self, event: IngressPerUnitReadyForUnitEvent):
         logger.info("Ingress for unit ready on '%s'", event.url)
