@@ -4,13 +4,11 @@
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 
 import unittest
-from unittest.mock import patch
 
 import ops
 import ops.testing
 from charm import Ros2bagFileserverCharm
-import yaml
-import socket
+
 
 ops.testing.SIMULATE_CAN_CONNECT = True
 
@@ -91,7 +89,6 @@ class TestCharm(unittest.TestCase):
     #     self.harness.add_relation_unit(rel_tcp_id, "traefik/0")
     #     plan = self.harness.get_container_pebble_plan(self.name)
     #     fqdn = socket.getfqdn()
-    
     #     self.assertEqual(
     #         self.harness.charm.external_url,  f"http://{fqdn}:80"
     #     )

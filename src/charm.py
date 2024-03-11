@@ -21,8 +21,6 @@ import logging
 
 from ops.charm import (
     CharmBase,
-    HookEvent,
-    RelationJoinedEvent,
 )
 
 from ops.main import main
@@ -158,7 +156,8 @@ class Ros2bagFileserverCharm(CharmBase):
         if self.container.can_connect():
             new_layer = self._pebble_layer.to_dict()
 
-            self._install_ssh_server()
+            if not self.container.exists("/etc/ssh/"):
+                self._install_ssh_server()
 
             if not self.container.exists("/srv/Caddyfile"):
                 current_caddyfile_config = self._generate_caddyfile_config()
@@ -191,9 +190,7 @@ class Ros2bagFileserverCharm(CharmBase):
     def set_ports(self):
         """Open necessary (and close no longer needed) workload ports."""
         planned_ports = (
-            {OpenedPort("tcp", int(self.config["ssh-port"]))}
-            if self.unit.is_leader()
-            else set()
+            {OpenedPort("tcp", int(self.config["ssh-port"]))} if self.unit.is_leader() else set()
         )
 
         actual_ports = self.unit.opened_ports()
@@ -227,9 +224,17 @@ class Ros2bagFileserverCharm(CharmBase):
         return config
 
     def _install_ssh_server(self):
+        """Install the openssh server and the rsync server.
+
+        This is temporary, in the future we should use a custom OCI image
+        that will have prebaked ssh server and rsync installed.
+        """
+        ssh_port = self.config["ssh-port"]
         try:
             self.container.exec(["apk", "add", "openssh"]).wait()
-            self.container.exec(['sed', '-i', 's/#Port 22/Port 2222/', '/etc/ssh/sshd_config'])
+            self.container.exec(
+                ["sed", "-i", f"s/#Port 22/Port {ssh_port}/", "/etc/ssh/sshd_config"]
+            )
             self.container.exec(["apk", "add", "openrc", "--no-cache"]).wait()
             self.container.exec(["apk", "add", "rsync"]).wait()
             self.container.exec(["rc-update", "add", "sshd"]).wait()
@@ -237,11 +242,11 @@ class Ros2bagFileserverCharm(CharmBase):
             self.container.exec(["rc-status"]).wait()
             config = """"""
             self.container.push(
-                            "/run/openrc/softlevel",
-                            config,
-                            permissions=0o777,
-                            make_dirs=True,
-                        )
+                "/run/openrc/softlevel",
+                config,
+                permissions=0o777,
+                make_dirs=True,
+            )
             self.container.exec(["/etc/init.d/sshd", "start"]).wait()
         except ExecError as e:
             print(f"Error: {e}")
