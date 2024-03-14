@@ -39,7 +39,7 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppRequirer,
 )
 
-from charms.devices_pub_keys_manager_k8s.v0.devices_pub_keys import DevicesKeysConsumer
+from charms.auth_devices_keys_k8s.v0.auth_devices_keys import AuthDevicesKeysConsumer
 from urllib.parse import urlparse
 import ast
 
@@ -84,10 +84,10 @@ class Ros2bagFileserverCharm(CharmBase):
         )
 
         # -- device_keys relation observations
-        self.devices_keys_consumer = DevicesKeysConsumer(self)
+        self.auth_devices_keys_consumer = AuthDevicesKeysConsumer(self, relation_name="auth-devices-keys")
         self.framework.observe(
-            self.devices_keys_consumer.on.devices_keys_changed,  # pyright: ignore
-            self._on_devices_keys_changed,
+            self.auth_devices_keys_consumer.on.auth_devices_keys_changed,  # pyright: ignore
+            self._on_auth_devices_keys_changed,
         )
 
         self.catalog = CatalogueConsumer(
@@ -106,10 +106,10 @@ class Ros2bagFileserverCharm(CharmBase):
             ),
         )
 
-    def _on_devices_keys_changed(self, event) -> None:
-        self._update_devices_public_keys(event)
+    def _on_auth_devices_keys_changed(self, event) -> None:
+        self._update_auth_devices_keys(event)
 
-    def _update_devices_public_keys(self, event) -> None:
+    def _update_auth_devices_keys(self, event) -> None:
         container = self.unit.get_container(self.name)
 
         if not container.can_connect():
@@ -117,16 +117,16 @@ class Ros2bagFileserverCharm(CharmBase):
             event.defer()
             return
 
-        devices_pub_keys_dict = ast.literal_eval(self.devices_keys_consumer._stored.devices_pub_keys)
+        auth_devices_keys_dict = ast.literal_eval(self.auth_devices_keys_consumer._stored.auth_devices_keys)
 
-        pub_keys_list = ""
+        auth_pub_keys_list = ""
 
-        for value in devices_pub_keys_dict["ssh_keys"].values():
-            pub_keys_list += value + "\n"
+        for value in auth_devices_keys_dict["ssh_pub_keys"].values():
+            auth_pub_keys_list += value + "\n"
 
         self.container.push(
                         "/root/.ssh/authorized_keys",
-                        pub_keys_list,
+                        auth_pub_keys_list,
                         permissions=0o777,
                         make_dirs=True,
                     )
