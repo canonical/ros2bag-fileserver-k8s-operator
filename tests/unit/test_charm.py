@@ -22,10 +22,15 @@ class TestCharm(unittest.TestCase):
 
         self.name = "ros2bag-fileserver"
         self.harness.set_model_name("testmodel")
+        self.harness.set_leader(True)
         self.harness.handle_exec(self.name, [], result=0)
-
         self.harness.begin_with_initial_hooks()
+
+    def test_openssh_file_exists_at_path(self):
         self.harness.container_pebble_ready(self.name)
+        self.assertTrue(
+            self.harness.model.unit.get_container(self.name).exists("/run/openrc/softlevel")
+        )
 
     def test_caddyfile_exists_at_path(self):
         self.harness.container_pebble_ready(self.name)
@@ -81,14 +86,21 @@ class TestCharm(unittest.TestCase):
         # Ensure we set an ActiveStatus with no message
         self.assertEqual(self.harness.model.unit.status, ops.ActiveStatus())
 
-    # TODO: Fix this test
-    # def test_ingress_relation_sets_options_and_rel_data(self):
-    #     self.harness.set_leader(True)
-    #     self.harness.container_pebble_ready(self.name)
-    #     rel_tcp_id = self.harness.add_relation("ingress-tcp", "traefik")
-    #     self.harness.add_relation_unit(rel_tcp_id, "traefik/0")
-    #     plan = self.harness.get_container_pebble_plan(self.name)
-    #     fqdn = socket.getfqdn()
-    #     self.assertEqual(
-    #         self.harness.charm.external_url,  f"http://{fqdn}:80"
-    #     )
+    def test_ingress_relation_http_rel_data(self):
+        self.harness.add_network("1.2.3.4")
+        rel_id = self.harness.add_relation("ingress-http", "traefik")
+        self.harness.container_pebble_ready(self.name)
+
+        rel_data = self.harness.get_relation_data(rel_id, self.harness.charm.app.name)
+
+        self.assertEqual(rel_data["port"], "80")
+        self.assertEqual(rel_data["name"], f'"{self.harness.charm.app.name}"')
+
+    def test_ingress_relation_tcp_rel_data(self):
+        rel_tcp_id = self.harness.add_relation("ingress-tcp", "traefik")
+        self.harness.container_pebble_ready(self.name)
+
+        rel_tcp_data = self.harness.get_relation_data(rel_tcp_id, "ros2bag-fileserver/0")
+        self.assertEqual(rel_tcp_data["port"], "2222")
+        self.assertEqual(rel_tcp_data["mode"], "tcp")
+        self.assertEqual(rel_tcp_data["name"], f"{self.harness.charm.app.name}/0")

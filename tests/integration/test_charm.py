@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
+import requests
+
 
 logger = logging.getLogger(__name__)
 
@@ -37,3 +39,12 @@ async def test_build_and_deploy(ops_test: OpsTest):
             apps=[APP_NAME], status="active", raise_on_blocked=True, timeout=1000
         ),
     )
+
+
+@pytest.mark.abort_on_fail
+async def test_connectivity(ops_test: OpsTest):
+    status = await ops_test.model.get_status()
+    address = status.applications[APP_NAME].units[APP_NAME + "/0"].address
+    appurl = f"http://{address}:80/"
+    r = requests.get(appurl)
+    assert r.status_code == 200

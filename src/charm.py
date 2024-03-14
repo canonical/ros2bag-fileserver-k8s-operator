@@ -58,6 +58,7 @@ class Ros2bagFileserverCharm(CharmBase):
 
         self.container = self.unit.get_container(self.name)
         self.caddyfile_config = ""
+        self._ssh_port = int(self.config["ssh-port"])
         self.set_ports()
 
         self.ingress_http = IngressPerAppRequirer(
@@ -70,7 +71,7 @@ class Ros2bagFileserverCharm(CharmBase):
         self.ingress_tcp = IngressPerUnitRequirer(
             self,
             relation_name="ingress-tcp",
-            port=self.config["ssh-port"],
+            port=self._ssh_port,
             mode="tcp",
         )
 
@@ -136,6 +137,8 @@ class Ros2bagFileserverCharm(CharmBase):
 
     def _on_ingress_ready_http(self, event: IngressPerAppReadyEvent):
         logger.info("Ingress for unit ready on '%s'", event.url)
+        if not self.unit.is_leader():
+            return
         self._update_layer_and_restart(event)
 
     def _on_install(self, _):
@@ -147,7 +150,7 @@ class Ros2bagFileserverCharm(CharmBase):
         self.unit.status = MaintenanceStatus("Assembling pod spec")
 
         self.ingress_tcp.provide_ingress_requirements(
-            scheme=urlparse(self.internal_url).scheme, port=self.config["ssh-port"]
+            scheme=urlparse(self.internal_url).scheme, port=self._ssh_port
         )
         self.ingress_http.provide_ingress_requirements(
             scheme=urlparse(self.internal_url).scheme, port=80
