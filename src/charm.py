@@ -84,7 +84,10 @@ class Ros2bagFileserverCharm(CharmBase):
         )
 
         # -- device_keys relation observations
-        self.auth_devices_keys_consumer = AuthDevicesKeysConsumer(self, relation_name="auth-devices-keys")
+        self.auth_devices_keys_consumer = AuthDevicesKeysConsumer(
+            self, relation_name="auth-devices-keys"
+        )
+
         self.framework.observe(
             self.auth_devices_keys_consumer.on.auth_devices_keys_changed,  # pyright: ignore
             self._on_auth_devices_keys_changed,
@@ -117,7 +120,9 @@ class Ros2bagFileserverCharm(CharmBase):
             event.defer()
             return
 
-        auth_devices_keys_dict = ast.literal_eval(self.auth_devices_keys_consumer._stored.auth_devices_keys)
+        auth_devices_keys_dict = ast.literal_eval(
+            self.auth_devices_keys_consumer._stored.auth_devices_keys
+        )
 
         auth_pub_keys_list = ""
 
@@ -125,11 +130,11 @@ class Ros2bagFileserverCharm(CharmBase):
             auth_pub_keys_list += value + "\n"
 
         self.container.push(
-                        "/root/.ssh/authorized_keys",
-                        auth_pub_keys_list,
-                        permissions=0o777,
-                        make_dirs=True,
-                    )
+            "/root/.ssh/authorized_keys",
+            auth_pub_keys_list,
+            permissions=0o777,
+            make_dirs=True,
+        )
 
     def _on_ingress_ready_tcp(self, event: IngressPerUnitReadyForUnitEvent):
         logger.info("Ingress for unit ready on '%s'", event.url)
