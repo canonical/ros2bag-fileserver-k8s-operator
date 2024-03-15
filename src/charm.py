@@ -120,9 +120,15 @@ class Ros2bagFileserverCharm(CharmBase):
             event.defer()
             return
 
-        auth_devices_keys_dict = ast.literal_eval(
-            self.auth_devices_keys_consumer._stored.auth_devices_keys
-        )
+        if self.auth_devices_keys_consumer.relation_data["auth_devices_keys"]:  # pyright: ignore
+            auth_devices_keys_dict = ast.literal_eval(
+                self.auth_devices_keys_consumer.relation_data[  # pyright: ignore
+                    "auth_devices_keys"
+                ]
+            )
+        else:
+            logger.error("No data in the relation")
+            return
 
         auth_pub_keys_list = ""
 

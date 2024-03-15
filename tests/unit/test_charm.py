@@ -8,11 +8,18 @@ import unittest
 import ops
 import ops.testing
 from charm import Ros2bagFileserverCharm
-
+import json
 
 ops.testing.SIMULATE_CAN_CONNECT = True
 
 CADDYFILE_PATH = "srv/Caddyfile"
+
+AUTH_DEVICES_KEYS_DATA = {
+    "ssh_pub_keys": {
+        "00001": "ssh-rsa public-key-ash",
+        "00002": "ssh-rsa AAAAB3NzaC1yc2EAAAmVDT4Njl",
+    }
+}
 
 
 class TestCharm(unittest.TestCase):
@@ -24,7 +31,9 @@ class TestCharm(unittest.TestCase):
         self.harness.set_model_name("testmodel")
         self.harness.set_leader(True)
         self.harness.handle_exec(self.name, [], result=0)
+        self.harness.add_network("1.2.3.4")
         self.harness.begin_with_initial_hooks()
+        self.harness.container_pebble_ready(self.name)
 
     def test_openssh_file_exists_at_path(self):
         self.harness.container_pebble_ready(self.name)
@@ -87,7 +96,6 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.harness.model.unit.status, ops.ActiveStatus())
 
     def test_ingress_relation_http_rel_data(self):
-        self.harness.add_network("1.2.3.4")
         rel_id = self.harness.add_relation("ingress-http", "traefik")
         self.harness.container_pebble_ready(self.name)
 
@@ -104,3 +112,31 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(rel_tcp_data["port"], "2222")
         self.assertEqual(rel_tcp_data["mode"], "tcp")
         self.assertEqual(rel_tcp_data["name"], f"{self.harness.charm.app.name}/0")
+
+    def test_auth_devices_keys_rel_data(self):
+        rel_id = self.harness.add_relation("auth-devices-keys", "cos-registration_agent")
+        self.harness.add_relation_unit(rel_id, "cos-registration_agent/0")
+
+        self.harness.update_relation_data(
+            rel_id,
+            "cos-registration_agent",
+            {
+                "auth_devices_keys": json.dumps(AUTH_DEVICES_KEYS_DATA),
+            },
+        )
+
+        self.assertTrue(
+            self.harness.model.unit.get_container(self.name).exists("/root/.ssh/authorized_keys")
+        )
+
+        expected_authorized_keys = (
+            "ssh-rsa public-key-ash\n" + "ssh-rsa AAAAB3NzaC1yc2EAAAmVDT4Njl\n"
+        )
+
+        actual_authorized_keys = (
+            self.harness.model.unit.get_container(self.name)
+            .pull("/root/.ssh/authorized_keys")
+            .read()
+        )
+
+        self.assertEqual(expected_authorized_keys, actual_authorized_keys)

@@ -171,7 +171,6 @@ class AuthDevicesKeysConsumer(Object):
         self._relation_name = relation_name
 
         self._stored.set_default(auth_devices_keys={})  # type: ignore
-
         self.framework.observe(
             self._charm.on[relation_name].relation_changed,
             self._on_relation_changed,
@@ -193,8 +192,6 @@ class AuthDevicesKeysConsumer(Object):
         if self._charm.unit.is_leader():
             try:
                 databag = event.relation.data[event.relation.app].get("auth_devices_keys", "")
-                logger.info(databag)
-                logger.info(type(databag))
             except ModelError as e:
                 logger.debug(
                     f"Error {e} attempting to read remote app data; "
@@ -229,12 +226,11 @@ class AuthDevicesKeysConsumer(Object):
         Returns:
             Dict: dict containing the relation data.
         """
-        relation = self.model.get_relation(self.relation_name)
-        if not relation or not relation.units:
+        relation = self.model.get_relation(self._relation_name)
+        if not relation:
             return None
-        unit = next(iter(relation.units))
-        return relation.data[unit]
 
+        return relation.data[relation.app]
 
 
 class AuthDevicesKeysProvider(Object):
