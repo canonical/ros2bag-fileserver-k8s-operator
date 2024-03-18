@@ -110,9 +110,6 @@ class Ros2bagFileserverCharm(CharmBase):
         )
 
     def _on_auth_devices_keys_changed(self, event) -> None:
-        self._update_auth_devices_keys(event)
-
-    def _update_auth_devices_keys(self, event) -> None:
         container = self.unit.get_container(self.name)
 
         if not container.can_connect():

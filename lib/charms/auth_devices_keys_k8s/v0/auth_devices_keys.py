@@ -70,8 +70,8 @@ from ops.charm import (
 from ops.model import ModelError, Relation
 from typing import Any, Dict, Optional
 import json
-import os
 
+## TODO: once this library is registered with charmlib the ID will be unique.
 # The unique Charmhub library identifier, never change it
 LIBID = "1"
 
@@ -109,10 +109,8 @@ class RelationInterfaceMismatchError(Exception):
         self.expected_relation_interface = expected_relation_interface
         self.actual_relation_interface = actual_relation_interface
         self.message = (
-            "The '{}' relation has '{}' as "
-            "interface rather than the expected '{}'".format(
-                relation_name, actual_relation_interface, expected_relation_interface
-            )
+            f"The '{relation_name}' relation has '{actual_relation_interface}' as "
+            "interface rather than the expected '{actual_relation_interface}'"
         )
 
         super().__init__(self.message)
@@ -130,9 +128,7 @@ class RelationRoleMismatchError(Exception):
         self.relation_name = relation_name
         self.expected_relation_interface = expected_relation_role
         self.actual_relation_role = actual_relation_role
-        self.message = "The '{}' relation has role '{}' rather than the expected '{}'".format(
-            relation_name, repr(actual_relation_role), repr(expected_relation_role)
-        )
+        self.message = f"The '{relation_name}' relation has role '{repr(actual_relation_role)}' rather than the expected '{repr(actual_relation_role)}'"
 
         super().__init__(self.message)
 
@@ -242,7 +238,6 @@ class AuthDevicesKeysProvider(Object):
         self,
         charm: CharmBase,
         relation_name: str = DEFAULT_RELATION_NAME,
-        auth_devices_keys_file: str = "/src/auth_devices_keys",
     ) -> None:
 
         """A class implementing the auth_devices_keys provides relation."""
@@ -250,7 +245,6 @@ class AuthDevicesKeysProvider(Object):
 
         self._charm = charm
         self._relation_name = relation_name
-        self._auth_devices_keys_file = auth_devices_keys_file
 
         self._stored.set_default(auth_devices_keys={})  # type: ignore
 
@@ -270,29 +264,25 @@ class AuthDevicesKeysProvider(Object):
             event: The :class:`RelationJoinedEvent` sent when a
                 `devices_keys` relationship is joined
         """
-        if self._charm.unit.is_leader():
-            self._update_all_auth_devices_keys_from_dir()
+        if not self._charm.unit.is_leader():
+            return
 
-    def _update_all_auth_devices_keys_from_dir(
-        self, _: Optional[HookEvent] = None) -> None:
+        auth_devices_keys_dict = self.charm._get_auth_devices_keys_from_db()
+        self._update_all_auth_devices_keys_from_db(auth_devices_keys_dict)
+
+    def _update_all_auth_devices_keys_from_db(
+        self, auth_devices_keys, _: Optional[HookEvent] = None) -> None:
         """Scans the available public keys and updates relations with changes."""
         # Update of storage must be done irrespective of leadership, so
         # that the stored state is there when this unit becomes leader.
 
-        if self._auth_devices_keys_file:
+        if auth_devices_keys:
             stored_auth_devices_keys: Any = self._stored.auth_devices_keys  # pyright: ignore
 
             for pub_rsa_key in list(stored_auth_devices_keys.keys()):
                 del stored_auth_devices_keys[pub_rsa_key]
 
-            try:
-                with open(self._auth_devices_keys_file, "r") as f:
-                    stored_auth_devices_keys = json.load(f)
-            except Exception as e:
-                logger.error(f"Failed to read SSH key file '{self._auth_devices_keys_file}': {e}")
-                logger.error(f"Current working directory: {os.getcwd()}")
-
-            self._stored.auth_devices_keys = stored_auth_devices_keys
+            self._stored.auth_devices_keys = auth_devices_keys
 
             if self._charm.unit.is_leader():
                 for ssh_keys_relation in self._charm.model.relations[self._relation_name]:
@@ -320,7 +310,8 @@ class AuthDevicesKeysProvider(Object):
         """
         changes = False
         if self._charm.unit.is_leader():
-            changes = self._update_all_auth_devices_keys_from_dir(event.relation)
+            auth_devices_keys_dict = self.charm._get_auth_devices_keys_from_db()
+            changes = self._update_all_auth_devices_keys_from_db(auth_devices_keys_dict, event.relation)
 
         if changes:
             self.on.auth_devices_keys_changed.emit() 
