@@ -248,16 +248,19 @@ class AuthDevicesKeysProvider(Object):
 
         self._stored.set_default(auth_devices_keys={})  # type: ignore
 
+        self.framework.observe(self._charm.on.leader_elected, self._on_handle_relation)
+        self.framework.observe(self._charm.on.upgrade_charm, self._on_handle_relation)
+
         self.framework.observe(
             self._charm.on[self._relation_name].relation_created,
-            self._on_relation_created,
+            self._on_handle_relation,
         )
         self.framework.observe(
             self._charm.on[self._relation_name].relation_changed,
             self._on_relation_changed,
         )
 
-    def _on_relation_created(self, event: RelationCreatedEvent) -> None:
+    def _on_handle_relation(self, event: RelationCreatedEvent) -> None:
         """Watch for a relation being created and automatically send authorized devices keys.
 
         Args:
@@ -267,7 +270,7 @@ class AuthDevicesKeysProvider(Object):
         if not self._charm.unit.is_leader():
             return
 
-        auth_devices_keys_dict = self.charm._get_auth_devices_keys_from_db()
+        auth_devices_keys_dict = self._charm._get_auth_devices_keys_from_db()
         self._update_all_auth_devices_keys_from_db(auth_devices_keys_dict)
 
     def _update_all_auth_devices_keys_from_db(
@@ -310,7 +313,7 @@ class AuthDevicesKeysProvider(Object):
         """
         changes = False
         if self._charm.unit.is_leader():
-            auth_devices_keys_dict = self.charm._get_auth_devices_keys_from_db()
+            auth_devices_keys_dict = self._charm._get_auth_devices_keys_from_db()
             changes = self._update_all_auth_devices_keys_from_db(auth_devices_keys_dict, event.relation)
 
         if changes:
