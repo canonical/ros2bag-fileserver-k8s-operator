@@ -26,8 +26,11 @@ resources:
     upstream-source: docker.io/caddy/caddy:2.5.2-alpine
 
 requires:
-  ingress:
-    interface: traefik_route
+  ingress-tcp:
+    interface: ingress_per_unit
+    limit: 1
+  ingress-http:
+    interface: ingress
     limit: 1
   catalogue:
     interface: catalogue
