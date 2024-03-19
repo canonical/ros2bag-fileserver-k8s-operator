@@ -271,9 +271,9 @@ class AuthDevicesKeysProvider(Object):
             return
 
         auth_devices_keys_dict = self._charm._get_auth_devices_keys_from_db()
-        self._update_all_auth_devices_keys_from_db(auth_devices_keys_dict)
+        self.update_all_auth_devices_keys_from_db(auth_devices_keys_dict)
 
-    def _update_all_auth_devices_keys_from_db(
+    def update_all_auth_devices_keys_from_db(
         self, auth_devices_keys, _: Optional[HookEvent] = None) -> None:
         """Scans the available public keys and updates relations with changes."""
         # Update of storage must be done irrespective of leadership, so
@@ -314,7 +314,7 @@ class AuthDevicesKeysProvider(Object):
         changes = False
         if self._charm.unit.is_leader():
             auth_devices_keys_dict = self._charm._get_auth_devices_keys_from_db()
-            changes = self._update_all_auth_devices_keys_from_db(auth_devices_keys_dict, event.relation)
+            changes = self.update_all_auth_devices_keys_from_db(auth_devices_keys_dict, event.relation)
 
         if changes:
             self.on.auth_devices_keys_changed.emit() 
