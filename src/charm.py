@@ -27,7 +27,6 @@ from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus, OpenedPort, ModelError
 from ops.pebble import Layer, ConnectionError, ExecError
 
-
 from charms.catalogue_k8s.v0.catalogue import CatalogueConsumer, CatalogueItem
 import socket
 from charms.traefik_k8s.v1.ingress_per_unit import (
@@ -40,8 +39,9 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppRequirer,
 )
 
-
+from charms.auth_devices_keys_k8s.v0.auth_devices_keys import AuthDevicesKeysConsumer
 from urllib.parse import urlparse
+import ast
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -83,6 +83,16 @@ class Ros2bagFileserverCharm(CharmBase):
             self.on.ros2bag_fileserver_pebble_ready, self._update_layer_and_restart
         )
 
+        # -- device_keys relation observations
+        self.auth_devices_keys_consumer = AuthDevicesKeysConsumer(
+            self, relation_name="auth-devices-keys"
+        )
+
+        self.framework.observe(
+            self.auth_devices_keys_consumer.on.auth_devices_keys_changed,  # pyright: ignore
+            self._on_auth_devices_keys_changed,
+        )
+
         self.catalog = CatalogueConsumer(
             charm=self,
             refresh_event=[
@@ -97,6 +107,36 @@ class Ros2bagFileserverCharm(CharmBase):
                 url=self.external_url,
                 description=("ROS 2 bag fileserver to store robotics data."),
             ),
+        )
+
+    def _on_auth_devices_keys_changed(self, event) -> None:
+        container = self.unit.get_container(self.name)
+
+        if not container.can_connect():
+            logger.debug("Cannot connect to Pebble yet, deferring event")
+            event.defer()
+            return
+
+        if self.auth_devices_keys_consumer.relation_data["auth_devices_keys"]:  # pyright: ignore
+            auth_devices_keys_dict = ast.literal_eval(
+                self.auth_devices_keys_consumer.relation_data[  # pyright: ignore
+                    "auth_devices_keys"
+                ]
+            )
+        else:
+            logger.error("No data in the relation")
+            return
+
+        auth_pub_keys_list = ""
+
+        for value in auth_devices_keys_dict["ssh_pub_keys"].values():
+            auth_pub_keys_list += value + "\n"
+
+        self.container.push(
+            "/root/.ssh/authorized_keys",
+            auth_pub_keys_list,
+            permissions=0o777,
+            make_dirs=True,
         )
 
     def _on_ingress_ready_tcp(self, event: IngressPerUnitReadyForUnitEvent):
