@@ -28,14 +28,6 @@ SOURCE_DATA = [
 ]
 
 SOURCE_DATA_ASSERTION = '[{"uid": "rob-cos-demo-robot-1", "public_ssh_key": "ssh-rsa AAAAB3NzaC1yc2EAAA"}, {"uid": "rob-cos-demo-robot-2", "public_ssh_key": "ssh-rsa public-key-ash"}]'
-# SOURCE_DATA = {
-#     "00001": "ssh-rsa public-key-ash",
-#     "00002": "ssh-rsa AAAAB3NzaC1yc2EAAAmVDT4Njl",
-# }
-
-# SOURCE_DATA_ASSERTION = (
-#     '{"00001": "ssh-rsa public-key-ash", "00002": "ssh-rsa AAAAB3NzaC1yc2EAAAmVDT4Njl"}'
-# )
 
 
 class ConsumerCharm(CharmBase):
