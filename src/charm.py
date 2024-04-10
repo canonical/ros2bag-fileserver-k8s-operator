@@ -41,7 +41,7 @@ from charms.traefik_k8s.v2.ingress import (
 
 from charms.auth_devices_keys_k8s.v0.auth_devices_keys import AuthDevicesKeysConsumer
 from urllib.parse import urlparse
-import ast
+import json
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -117,24 +117,22 @@ class Ros2bagFileserverCharm(CharmBase):
             event.defer()
             return
 
-        if self.auth_devices_keys_consumer.relation_data["auth_devices_keys"]:  # pyright: ignore
-            auth_devices_keys_dict = ast.literal_eval(
-                self.auth_devices_keys_consumer.relation_data[  # pyright: ignore
-                    "auth_devices_keys"
-                ]
-            )
-        else:
+        if not self.auth_devices_keys_consumer.relation_data["auth_devices_keys"]:
             logger.error("No data in the relation")
             return
 
-        auth_pub_keys_list = ""
+        auth_devices_keys = self.auth_devices_keys_consumer.relation_data[  # pyright: ignore
+            "auth_devices_keys"
+        ]
 
-        for value in auth_devices_keys_dict["ssh_pub_keys"].values():
-            auth_pub_keys_list += value + "\n"
+        auth_devices_keys_list = json.loads(auth_devices_keys)
 
+        public_ssh_keys = [entry["public_ssh_key"] + "\n" for entry in auth_devices_keys_list]
+
+        string_of_keys = "".join(public_ssh_keys)
         self.container.push(
             "/root/.ssh/authorized_keys",
-            auth_pub_keys_list,
+            string_of_keys,
             permissions=0o777,
             make_dirs=True,
         )
