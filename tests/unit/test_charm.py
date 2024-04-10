@@ -14,12 +14,16 @@ ops.testing.SIMULATE_CAN_CONNECT = True
 
 CADDYFILE_PATH = "srv/Caddyfile"
 
-AUTH_DEVICES_KEYS_DATA = {
-    "ssh_pub_keys": {
-        "00001": "ssh-rsa public-key-ash",
-        "00002": "ssh-rsa AAAAB3NzaC1yc2EAAAmVDT4Njl",
-    }
-}
+AUTH_DEVICES_KEYS_DATA = [
+    {
+        "uid": "rob-cos-demo-robot-1",
+        "public_ssh_key": "ssh-rsa public-key-ash",
+    },
+    {
+        "uid": "rob-cos-demo-robot-2",
+        "public_ssh_key": "ssh-rsa AAAAB3NzaC1yc2EAAAmVDT4Njl",
+    },
+]
 
 
 class TestCharm(unittest.TestCase):
