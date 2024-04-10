@@ -122,19 +122,17 @@ class Ros2bagFileserverCharm(CharmBase):
             return
 
         auth_devices_keys = self.auth_devices_keys_consumer.relation_data[  # pyright: ignore
-                    "auth_devices_keys"
-                ]
+            "auth_devices_keys"
+        ]
 
         auth_devices_keys_list = json.loads(auth_devices_keys)
-        print(type(auth_devices_keys_list))
-        print(auth_devices_keys_list)
+
         public_ssh_keys = [entry["public_ssh_key"] + "\n" for entry in auth_devices_keys_list]
 
-        result_string = ''.join(public_ssh_keys)
-        print(result_string)
+        string_of_keys = "".join(public_ssh_keys)
         self.container.push(
             "/root/.ssh/authorized_keys",
-            result_string,
+            string_of_keys,
             permissions=0o777,
             make_dirs=True,
         )
