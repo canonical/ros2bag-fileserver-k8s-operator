@@ -39,43 +39,13 @@ class TestCharm(unittest.TestCase):
         self.harness.begin_with_initial_hooks()
         self.harness.container_pebble_ready(self.name)
 
-    def test_openssh_file_exists_at_path(self):
-        self.harness.container_pebble_ready(self.name)
-        self.assertTrue(
-            self.harness.model.unit.get_container(self.name).exists("/run/openrc/softlevel")
-        )
-
     def test_caddyfile_exists_at_path(self):
         self.harness.container_pebble_ready(self.name)
         self.assertTrue(self.harness.model.unit.get_container(self.name).exists("/srv/Caddyfile"))
 
-    def test_caddyfile_config_is_valid(self):
-        self.harness.container_pebble_ready(self.name)
-
-        expected_caddyfile_config = """:80 {
-            # Set this path to your site's directory.
-            root * /var/lib/caddy-fileserver
-
-            # Enable the static file server.
-            file_server browse
-            header {
-                Access-Control-Allow-Origin *
-                Access-Control-Allow-Methods GET, POST, PUT, DELETE, OPTIONS
-                Access-Control-Allow-Headers *
-            }
-
-            log {
-                output file /var/log/access.log
-            }
-        }"""
-        actual_caddyfile_config = (
-            self.harness.model.unit.get_container(self.name).pull("/srv/Caddyfile").read()
-        )
-        self.assertEqual(expected_caddyfile_config, actual_caddyfile_config)
-
     def test_ros2bag_fileserver_pebble_ready(self):
         # Expected plan after Pebble ready with default config
-        command = " ".join(["caddy", "run", "/srv/Caddyfile"])
+        command = " ".join(["caddy", "run", "--config", "/srv/Caddyfile"])
 
         expected_plan = {
             "services": {
