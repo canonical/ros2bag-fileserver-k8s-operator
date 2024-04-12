@@ -133,7 +133,7 @@ class Ros2bagFileserverCharm(CharmBase):
         self.container.push(
             "/root/.ssh/authorized_keys",
             string_of_keys,
-            permissions=0o777,
+            permissions=0o600,
             make_dirs=True,
         )
 
@@ -165,23 +165,7 @@ class Ros2bagFileserverCharm(CharmBase):
         if self.container.can_connect():
             new_layer = self._pebble_layer.to_dict()
 
-            if not self.container.exists("/etc/ssh/"):
-                self._install_ssh_server()
-
-            if not self.container.exists("/srv/Caddyfile"):
-                current_caddyfile_config = self._generate_caddyfile_config()
-                try:
-                    self.container.push(
-                        "/srv/Caddyfile",
-                        current_caddyfile_config,
-                        permissions=0o777,
-                        make_dirs=True,
-                    )
-                    logger.info("Pushed caddyfile")
-                except ConnectionError:
-                    logger.error(
-                        "Could not push datasource config. Pebble refused connection. Shutting down?"
-                    )
+            self._set_ssh_server_port("/etc/ssh/sshd_config")
 
             # Get the current pebble layer config
             services = self.container.get_plan().to_dict().get("services", {})
@@ -213,52 +197,19 @@ class Ros2bagFileserverCharm(CharmBase):
         for p in new_ports_to_open:
             self.unit.open_port(p.protocol, p.port)
 
-    def _generate_caddyfile_config(self) -> str:
-        config = """:80 {
-            # Set this path to your site's directory.
-            root * /var/lib/caddy-fileserver
+    def _set_ssh_server_port(self, sshd_config_path):
+        sshd_config = self.container.pull(sshd_config_path).read()
 
-            # Enable the static file server.
-            file_server browse
-            header {
-                Access-Control-Allow-Origin *
-                Access-Control-Allow-Methods GET, POST, PUT, DELETE, OPTIONS
-                Access-Control-Allow-Headers *
-            }
+        if f'Port {self._ssh_port}' in sshd_config:
+            return
 
-            log {
-                output file /var/log/access.log
-            }
-        }"""
-        return config
-
-    def _install_ssh_server(self):
-        """Install the openssh server and the rsync server.
-
-        This is temporary, in the future we should use a custom OCI image
-        that will have prebaked ssh server and rsync installed.
-        """
-        ssh_port = self.config["ssh-port"]
         try:
-            self.container.exec(["apk", "add", "openssh"]).wait()
             self.container.exec(
-                ["sed", "-i", f"s/#Port 22/Port {ssh_port}/", "/etc/ssh/sshd_config"]
+                ["sed", "-i", f"s/#Port 22/Port {self._ssh_port}/", sshd_config_path]
             )
-            self.container.exec(["apk", "add", "openrc", "--no-cache"]).wait()
-            self.container.exec(["apk", "add", "rsync"]).wait()
-            self.container.exec(["rc-update", "add", "sshd"]).wait()
-            self.container.exec(["ssh-keygen", "-A"]).wait()
-            self.container.exec(["rc-status"]).wait()
-            config = """"""
-            self.container.push(
-                "/run/openrc/softlevel",
-                config,
-                permissions=0o777,
-                make_dirs=True,
-            )
-            self.container.exec(["/etc/init.d/sshd", "start"]).wait()
+            self.container.exec(["service", "ssh", "restart"]).wait()
         except ExecError as e:
-            print(f"Error: {e}")
+            logger.error(f"Error: {e}")
 
     @property
     def _scheme(self) -> str:
@@ -290,7 +241,7 @@ class Ros2bagFileserverCharm(CharmBase):
     @property
     def _pebble_layer(self):
         """Return a dictionary representing a Pebble layer."""
-        command = " ".join(["caddy", "run", "/srv/Caddyfile"])
+        command = " ".join(["caddy", "run", "--config", "/srv/Caddyfile"])
 
         pebble_layer = Layer(
             {
