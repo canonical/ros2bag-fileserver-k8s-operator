@@ -104,7 +104,7 @@ class Ros2bagFileserverCharm(CharmBase):
             item=CatalogueItem(
                 name="ros2bag fileserver",
                 icon="graph-line-variant",
-                url=self.external_url,
+                url=self.external_url + "/",
                 description=("ROS 2 bag fileserver to store robotics data."),
             ),
         )
