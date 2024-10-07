@@ -37,3 +37,7 @@ requires:
   auth-devices-keys:
     interface: auth_devices_keys
     limit: 1
+
+provides:
+  blackbox-probes:
+    interface: blackbox_probes

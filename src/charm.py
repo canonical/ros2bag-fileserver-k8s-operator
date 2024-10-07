@@ -40,6 +40,8 @@ from charms.traefik_k8s.v2.ingress import (
 )
 
 from charms.auth_devices_keys_k8s.v0.auth_devices_keys import AuthDevicesKeysConsumer
+from charms.blackbox_k8s.v0.blackbox_probes import BlackboxProbesProvider
+
 from urllib.parse import urlparse
 import json
 
@@ -107,6 +109,16 @@ class Ros2bagFileserverCharm(CharmBase):
                 url=self.external_url + "/",
                 description=("ROS 2 bag fileserver to store robotics data."),
             ),
+        )
+
+        self.blackbox_probes_provider = BlackboxProbesProvider(
+            charm=self,
+            probes=self.self_probe,
+            refresh_event=[
+                self.on.update_status,
+                self.ingress_http.on.ready,
+                self.on.config_changed,
+            ],
         )
 
     def _on_auth_devices_keys_changed(self, event) -> None:
@@ -237,6 +249,23 @@ class Ros2bagFileserverCharm(CharmBase):
         except ModelError as e:
             logger.error("Failed obtaining external url: %s. Shutting down?", e)
         return self.internal_url
+
+    @property
+    def self_probe(self):
+        """The self-monitoring blackbox probe."""
+        probe = {
+            'job_name': 'blackbox_http_2xx',
+            'params': {
+                'module': ['http_2xx']
+            },
+            'static_configs': [
+                {
+                    'targets': [self.external_url],
+                    'labels': {'name': "ros2bag-fileserver"}
+                }
+            ]
+        }
+        return [probe]
 
     @property
     def _pebble_layer(self):

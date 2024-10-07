@@ -1,4 +1,6 @@
-ops ~= 2.8
+ops
 
 # required for traefik ingress-per-unit
 jsonschema
+
+cosl
