@@ -23,7 +23,7 @@ resources:
   caddy-fileserver-image:
     type: oci-image
     description: upstream docker image for Caddy
-    upstream-source: ghcr.io/ubuntu-robotics/ros2bag-fileserver:dev
+    upstream-source: ghcr.io/canonical/ros2bag-fileserver:dev
 
 requires:
   ingress-tcp:
