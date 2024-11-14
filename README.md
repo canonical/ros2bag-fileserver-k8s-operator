@@ -13,7 +13,7 @@ To deploy the local charm follow these instructions:
 - Clone the source repository
   
   ```
-  git clone https://github.com/ubuntu-robotics/ros2bag-fileserver-k8s-operator.git
+  git clone https://github.com/canonical/ros2bag-fileserver-k8s-operator.git
   ```
 
 - Access the folder
@@ -53,7 +53,7 @@ To deploy with COS lite bundle follow these instructions:
 - Clone the source repository
 
   ```
-  git clone https://github.com/ubuntu-robotics/ros2bag-fileserver-k8s-operator.git
+  git clone https://github.com/canonical/ros2bag-fileserver-k8s-operator.git
   ```
 
 - Enter the folder
@@ -73,7 +73,7 @@ To deploy with COS lite bundle follow these instructions:
   ```
   juju deploy cos-lite --trust --overlay ./robotics-overlay.yaml
   ```
-  NB. this bundle is in development and attempts to deploy the foxglove-studio-k8s charm. Before deploying make sure to have the charm in the ros2bag-fileserver-k8s folder. You can create the charm by following the instructions at [foxglove-k8s-operator repository](https://github.com/ubuntu-robotics/foxglove-k8s-operator.git).
+  NB. this bundle is in development and attempts to deploy the foxglove-studio-k8s charm. Before deploying make sure to have the charm in the ros2bag-fileserver-k8s folder. You can create the charm by following the instructions at [foxglove-k8s-operator repository](https://github.com/canonical/foxglove-k8s-operator.git).
 
 
   Once deployed the ros2bag-fileserver charm will be accessible via traefik at the following link:
