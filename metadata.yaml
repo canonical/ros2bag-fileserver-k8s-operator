@@ -1,6 +1,7 @@
 name: ros2bag-fileserver-k8s
 assumes:
   - k8s-api
+  - juju >= 3.4.3
 summary: |
   Robotics data fileserver storage
 
@@ -34,6 +35,6 @@ requires:
     limit: 1
   catalogue:
     interface: catalogue
-  auth-devices-keys:
+  auth_devices_keys:
     interface: auth_devices_keys
     limit: 1

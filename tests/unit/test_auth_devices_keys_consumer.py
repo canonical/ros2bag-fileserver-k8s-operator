@@ -4,11 +4,11 @@
 import json
 import unittest
 
-from charms.auth_devices_keys_k8s.v0.auth_devices_keys import AuthDevicesKeysConsumer
-
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.testing import Harness
+
+from auth_devices_keys import AuthDevicesKeysConsumer
 
 if "unittest.util" in __import__("sys").modules:
     # Show full diff in self.assertEqual.

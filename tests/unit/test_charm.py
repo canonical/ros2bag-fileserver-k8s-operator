@@ -3,12 +3,14 @@
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 
+import json
 import unittest
+from unittest.mock import patch
 
 import ops
 import ops.testing
+
 from charm import Ros2bagFileserverCharm
-import json
 
 ops.testing.SIMULATE_CAN_CONNECT = True
 
