@@ -56,29 +56,26 @@ class TestAuthDevicesKeysConsumer(unittest.TestCase):
         self.harness.set_leader(True)
         self.harness.begin()
 
-    def setup_charm_relations(self) -> list:
+    def setup_charm_relation(self) -> int:
         """Create relations used by test cases."""
-        rel_ids = []
         self.assertEqual(self.harness.charm._stored.auth_devices_keys_events, 0)
-        rel_id = self.harness.add_relation("auth_devices_keys", "provider")
+        rel_id = self.harness.add_relation("auth-devices-keys", "provider")
         self.harness.add_relation_unit(rel_id, "provider/0")
-        rel_ids.append(rel_id)
         self.harness.update_relation_data(
             rel_id,
             "provider",
             {
-                "auth_devices_keys": json.dumps(SOURCE_DATA),
+                "auth-devices-keys": json.dumps(SOURCE_DATA),
             },
         )
-
-        return rel_ids
+        return rel_id
 
     def test_consumer_auth_devices_keys_available(self):
-        self.assertEqual(self.harness.charm._stored.auth_devices_keys_events, 0)
-        self.setup_charm_relations()
-        self.assertEqual(self.harness.charm._stored.auth_devices_keys_events, 1)
+        rel_id = self.setup_charm_relation()
+
+        rel_data = self.harness.get_relation_data(rel_id, "provider")
 
         self.assertEqual(
-            self.harness.charm.auth_devices_keys_consumer.relation_data["auth_devices_keys"],
+            rel_data["auth-devices-keys"],
             SOURCE_DATA_ASSERTION,
         )

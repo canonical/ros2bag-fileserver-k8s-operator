@@ -35,6 +35,6 @@ requires:
     limit: 1
   catalogue:
     interface: catalogue
-  auth_devices_keys:
+  auth-devices-keys:
     interface: auth_devices_keys
     limit: 1
