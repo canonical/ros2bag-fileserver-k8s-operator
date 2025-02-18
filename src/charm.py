@@ -114,6 +114,9 @@ class Ros2bagFileserverCharm(CharmBase):
             event.defer()
             return
 
+        if not self.auth_devices_keys_consumer.relation_data:
+            return
+
         if not self.auth_devices_keys_consumer.relation_data["auth_devices_keys"]:
             logger.error("No data in the relation")
             return
