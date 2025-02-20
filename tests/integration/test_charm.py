@@ -7,10 +7,13 @@ import logging
 from pathlib import Path
 
 import pytest
-import yaml
-from pytest_operator.plugin import OpsTest
 import requests
-
+import yaml
+from charmed_kubeflow_chisme.testing.cos_integration import (
+    PROVIDES,
+    _get_app_relation_data,
+)
+from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
@@ -48,3 +51,40 @@ async def test_connectivity(ops_test: OpsTest):
     appurl = f"http://{address}:80/"
     r = requests.get(appurl)
     assert r.status_code == 200
+
+
+async def test_integrate_blackbox(ops_test: OpsTest):
+    # @todo: upgrade to stable when blackbox charm with probes relation
+    # is promoted from edge.
+    await ops_test.model.deploy(
+        "blackbox-exporter-k8s", "blackbox", channel="latest/edge", trust=True
+    )
+
+    logger.info(
+        "Adding relation: %s:%s",
+        APP_NAME,
+        "probes",
+    )
+
+    await ops_test.model.integrate(
+        f"{APP_NAME}",
+        "blackbox:probes",
+    )
+
+    await ops_test.model.wait_for_idle(
+        apps=[
+            f"{APP_NAME}",
+            "blackbox",
+        ],
+        status="active",
+    )
+
+
+async def test_blackbox(ops_test: OpsTest):
+    """Test probes are defined in relation data bag."""
+    app = ops_test.model.applications[APP_NAME]
+
+    relation_data = await _get_app_relation_data(app, "probes", side=PROVIDES)
+
+    assert relation_data.get("scrape_metadata")
+    assert relation_data.get("scrape_probes")

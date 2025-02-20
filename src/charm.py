@@ -17,33 +17,29 @@
 
 """A kubernetes charm for storing robotics bag files."""
 
+import json
 import logging
-
-from ops.charm import (
-    CharmBase,
-)
-
-from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus, OpenedPort, ModelError
-from ops.pebble import Layer, ConnectionError, ExecError
-
-from charms.catalogue_k8s.v0.catalogue import CatalogueConsumer, CatalogueItem
 import socket
+from urllib.parse import urlparse
+
+from charms.blackbox_k8s.v0.blackbox_probes import BlackboxProbesProvider
+from charms.catalogue_k8s.v0.catalogue import CatalogueConsumer, CatalogueItem
 from charms.traefik_k8s.v1.ingress_per_unit import (
     IngressPerUnitReadyForUnitEvent,
     IngressPerUnitRequirer,
 )
-
 from charms.traefik_k8s.v2.ingress import (
     IngressPerAppReadyEvent,
     IngressPerAppRequirer,
 )
+from ops.charm import (
+    CharmBase,
+)
+from ops.main import main
+from ops.model import ActiveStatus, MaintenanceStatus, ModelError, OpenedPort, WaitingStatus
+from ops.pebble import ExecError, Layer
 
-from charms.auth_devices_keys_k8s.v0.auth_devices_keys import AuthDevicesKeysConsumer
-from charms.blackbox_k8s.v0.blackbox_probes import BlackboxProbesProvider
-
-from urllib.parse import urlparse
-import json
+from auth_devices_keys import AuthDevicesKeysConsumer
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -129,6 +125,9 @@ class Ros2bagFileserverCharm(CharmBase):
             event.defer()
             return
 
+        if not self.auth_devices_keys_consumer.relation_data:
+            return
+
         if not self.auth_devices_keys_consumer.relation_data["auth_devices_keys"]:
             logger.error("No data in the relation")
             return
@@ -212,7 +211,7 @@ class Ros2bagFileserverCharm(CharmBase):
     def _set_ssh_server_port(self, sshd_config_path):
         sshd_config = self.container.pull(sshd_config_path).read()
 
-        if f'Port {self._ssh_port}' in sshd_config:
+        if f"Port {self._ssh_port}" in sshd_config:
             return
 
         try:
@@ -254,16 +253,11 @@ class Ros2bagFileserverCharm(CharmBase):
     def self_probe(self):
         """The self-monitoring blackbox probe."""
         probe = {
-            'job_name': 'blackbox_http_2xx',
-            'params': {
-                'module': ['http_2xx']
-            },
-            'static_configs': [
-                {
-                    'targets': [self.external_url],
-                    'labels': {'name': "ros2bag-fileserver"}
-                }
-            ]
+            "job_name": "blackbox_http_2xx",
+            "params": {"module": ["http_2xx"]},
+            "static_configs": [
+                {"targets": [self.external_url], "labels": {"name": "ros2bag-fileserver"}}
+            ],
         }
         return [probe]
 

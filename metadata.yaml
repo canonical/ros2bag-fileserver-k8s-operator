@@ -1,6 +1,7 @@
 name: ros2bag-fileserver-k8s
 assumes:
   - k8s-api
+  - juju >= 3.4.3
 summary: |
   Robotics data fileserver storage
 
@@ -23,7 +24,7 @@ resources:
   caddy-fileserver-image:
     type: oci-image
     description: upstream docker image for Caddy
-    upstream-source: ghcr.io/ubuntu-robotics/ros2bag-fileserver:dev
+    upstream-source: ghcr.io/canonical/ros2bag-fileserver:dev
 
 requires:
   ingress-tcp:
