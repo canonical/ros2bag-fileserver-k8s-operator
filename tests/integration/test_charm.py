@@ -7,10 +7,9 @@ import logging
 from pathlib import Path
 
 import pytest
+import requests
 import yaml
 from pytest_operator.plugin import OpsTest
-import requests
-
 
 logger = logging.getLogger(__name__)
 

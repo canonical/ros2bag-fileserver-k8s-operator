@@ -2,3 +2,4 @@ ops ~= 2.8
 
 # required for traefik ingress-per-unit
 jsonschema
+pydantic
