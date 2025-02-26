@@ -1,5 +1,7 @@
-ops ~= 2.8
+ops
 
 # required for traefik ingress-per-unit
 jsonschema
+# blackbox_exporter_k8s/v0/blackbox_probes.py
+cosl
 pydantic
