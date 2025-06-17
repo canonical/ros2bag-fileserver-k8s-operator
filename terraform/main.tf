@@ -13,7 +13,8 @@ resource "juju_application" "ros2bag_fileserver" {
     channel  = var.channel
     revision = var.revision
   }
-  units     = var.units
-  config    = var.config
-  resources = var.resources
+  units              = var.units
+  config             = var.config
+  resources          = var.resources
+  storage_directives = var.storage
 }

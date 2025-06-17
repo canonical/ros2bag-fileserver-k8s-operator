@@ -10,12 +10,12 @@ output "requires" {
     ingress_http      = "ingress"
     auth-devices-keys = "auth_devices_keys"
   }
-  description = "The integration endpoints required by the application"
+  description = "Map of the integration endpoints required by the application"
 }
 
 output "provides" {
   value = {
     blackbox_probes = "blackbox-probes"
   }
-  description = "The integration endpoints provided by the application"
+  description = "Map of the integration endpoints provided by the application"
 }
