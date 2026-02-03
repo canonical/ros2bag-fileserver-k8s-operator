@@ -57,7 +57,7 @@ async def test_integrate_blackbox(ops_test: OpsTest):
     # @todo: upgrade to stable when blackbox charm with probes relation
     # is promoted from edge.
     await ops_test.model.deploy(
-        "blackbox-exporter-k8s", "blackbox", channel="latest/edge", trust=True
+        "blackbox-exporter-k8s", "blackbox", channel="1/stable", trust=True
     )
 
     logger.info(
