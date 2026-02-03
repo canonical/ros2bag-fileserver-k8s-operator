@@ -19,7 +19,7 @@ bases:
       channel: "22.04"
 
 charm-libs:
-  - lib: blackbox_k8s.blackbox_probes
+  - lib: blackbox_exporter_k8s.blackbox_probes
     version: "0"
   - lib: catalogue_k8s.catalogue
     version: "0"
