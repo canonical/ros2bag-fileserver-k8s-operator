@@ -22,7 +22,7 @@ import logging
 import socket
 from urllib.parse import urlparse
 
-from charms.blackbox_k8s.v0.blackbox_probes import BlackboxProbesProvider
+from charms.blackbox_exporter_k8s.v0.blackbox_probes import BlackboxProbesProvider
 from charms.catalogue_k8s.v0.catalogue import CatalogueConsumer, CatalogueItem
 from charms.traefik_k8s.v1.ingress_per_unit import (
     IngressPerUnitReadyForUnitEvent,
