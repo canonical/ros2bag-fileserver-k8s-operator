@@ -110,6 +110,7 @@ class Ros2bagFileserverCharm(CharmBase):
         self.blackbox_probes_provider = BlackboxProbesProvider(
             charm=self,
             probes=self.self_probe,
+            relation_name="blackbox-probes",
             refresh_event=[
                 self.on.update_status,
                 self.ingress_http.on.ready,
