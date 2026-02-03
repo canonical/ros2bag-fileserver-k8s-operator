@@ -1,5 +1,5 @@
 data "juju_model" "model" {
-  name  = "testing"
+  name = "testing"
 }
 
 variable "channel" {
@@ -20,9 +20,9 @@ terraform {
 provider "juju" {}
 
 module "ros2bag_fileserver_k8s" {
-  app_name   = "ros2bag-fileserver"
-  source     = "./.."
-  channel    = var.channel
-  model = data.juju_model.model.uuid
-  units      = 1
+  app_name = "ros2bag-fileserver"
+  source   = "./.."
+  channel  = var.channel
+  model    = data.juju_model.model.uuid
+  units    = 1
 }
