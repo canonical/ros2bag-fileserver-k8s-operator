@@ -56,7 +56,7 @@ run "basic_deploy" {
   # Test provides integration endpoints - check count
   assert {
     condition     = length(module.ros2bag_fileserver_k8s.provides) == 1
-    error_message = "Expected 1 provided integration endpoints"
+    error_message = "Expected 1 provided integration endpoint"
   }
 
   # Test provides integration endpoints - check specific keys
