@@ -14,5 +14,7 @@ jobs:
   release:
     uses: canonical/observability/.github/workflows/charm-release.yaml@v0
     # secrets: inherit
+    with:
+      juju-channel: 3.6/stable
     secrets:
       CHARMHUB_TOKEN: ${{ secrets.CHARMHUB_TOKEN }}
