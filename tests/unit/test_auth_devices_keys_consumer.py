@@ -49,7 +49,7 @@ class ConsumerCharm(CharmBase):
 
 class TestAuthDevicesKeysConsumer(unittest.TestCase):
     def setUp(self):
-        meta = open("metadata.yaml")
+        meta = open("charmcraft.yaml")
         self.harness = Harness(ConsumerCharm, meta=meta)
         self.harness.set_model_info(name=MODEL_INFO["name"], uuid=MODEL_INFO["uuid"])
         self.addCleanup(self.harness.cleanup)

@@ -17,8 +17,8 @@ from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
+CHARMCRAFT_YAML = yaml.safe_load(Path("./charmcraft.yaml").read_text())
+APP_NAME = CHARMCRAFT_YAML["name"]
 
 
 @pytest.mark.abort_on_fail
@@ -30,7 +30,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
     # Build and deploy charm from local source folder
     charm = await ops_test.build_charm(".")
     resources = {
-        "caddy-fileserver-image": METADATA["resources"]["caddy-fileserver-image"][
+        "caddy-fileserver-image": CHARMCRAFT_YAML["resources"]["caddy-fileserver-image"][
             "upstream-source"
         ]
     }
@@ -57,7 +57,7 @@ async def test_integrate_blackbox(ops_test: OpsTest):
     # @todo: upgrade to stable when blackbox charm with probes relation
     # is promoted from edge.
     await ops_test.model.deploy(
-        "blackbox-exporter-k8s", "blackbox", channel="latest/edge", trust=True
+        "blackbox-exporter-k8s", "blackbox", channel="1/stable", trust=True
     )
 
     logger.info(

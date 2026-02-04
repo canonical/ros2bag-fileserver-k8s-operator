@@ -1,5 +1,0 @@
-options:
-  ssh-port:
-    default: 2222
-    description: Default port on which SSH connection is available for rsync
-    type: int
