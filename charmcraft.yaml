@@ -1,7 +1,15 @@
-# This file configures Charmcraft.
-# See https://juju.is/docs/sdk/charmcraft-config for guidance.
-
 type: charm
+name: ros2bag-fileserver-k8s
+assumes:
+  - k8s-api
+  - juju >= 3.4.3
+summary: |
+  Robotics data fileserver storage
+
+description: |
+  ros2bag data fileserver storage. The fileserver is served with Caddy and it is
+  meant to be used with the COS lite stack and the Foxglove studio charm.
+
 bases:
   - build-on:
     - name: ubuntu
@@ -9,6 +17,57 @@ bases:
     run-on:
     - name: ubuntu
       channel: "22.04"
+
+charm-libs:
+  - lib: blackbox_exporter_k8s.blackbox_probes
+    version: "0"
+  - lib: catalogue_k8s.catalogue
+    version: "0"
+  - lib: traefik_k8s.ingress_per_unit
+    version: "1"
+  - lib: traefik_k8s.ingress
+    version: "2"
+
+containers:
+  ros2bag-fileserver:
+    resource: caddy-fileserver-image
+    mounts:
+      - storage: database
+        location: /var/lib/caddy-fileserver
+
+storage:
+  database:
+    type: filesystem
+
+resources:
+  caddy-fileserver-image:
+    type: oci-image
+    description: upstream docker image for Caddy
+    upstream-source: ghcr.io/canonical/ros2bag-fileserver:dev
+
+requires:
+  ingress-tcp:
+    interface: ingress_per_unit
+    limit: 1
+  ingress-http:
+    interface: ingress
+    limit: 1
+  catalogue:
+    interface: catalogue
+  auth-devices-keys:
+    interface: auth_devices_keys
+    limit: 1
+
+provides:
+  blackbox-probes:
+    interface: blackbox_exporter_probes
+
+config:
+  options:
+    ssh-port:
+      default: 2222
+      description: Default port on which SSH connection is available for rsync
+      type: int
 
 parts:
   charm:
