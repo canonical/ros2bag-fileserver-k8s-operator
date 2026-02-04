@@ -60,7 +60,7 @@ requires:
 
 provides:
   blackbox-probes:
-    interface: blackbox_probes
+    interface: blackbox_exporter_probes
 
 config:
   options:
