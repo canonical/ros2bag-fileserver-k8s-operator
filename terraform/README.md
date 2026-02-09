@@ -51,7 +51,7 @@ terraform apply -var="model=<MODEL_NAME>"
 | constraints | String listing constraints for the application | `string` | `"arch=amd64"` | no |
 | resources | Resources used by the charm | `map(string)` | ```{ "caddy-fileserver-image": "ghcr.io/ubuntu-robotics/ros2bag-fileserver:dev" }``` | no |
 | revision | Revision number of the charm | `number` | `null` | no |
-| storage | Map of storage used by the application. Defaults to 1 GB, allocated by Juju | `map(string)` | `{}` | no |
+| storage\_directives | Map of storage used by the application. Defaults to 1 GB, allocated by Juju | `map(string)` | `{}` | no |
 | units | Unit count/scale | `number` | `1` | no |
 
 ## Outputs
