@@ -46,10 +46,10 @@ terraform apply -var="model=<MODEL_NAME>"
 |------|-------------|------|---------|:--------:|
 | model\_uuid | UUID of the model to deploy to (must be a K8s model) | `string` | n/a | yes |
 | app\_name | Name to give the deployed application | `string` | `"ros2bag-fileserver"` | no |
-| channel | Channel that the charm is deployed from | `string` | `"latest/edge"` | no |
+| channel | Channel that the charm is deployed from | `string` | `"0/stable"` | no |
 | config | Map of the charm configuration options | `map(string)` | `{}` | no |
 | constraints | String listing constraints for the application | `string` | `"arch=amd64"` | no |
-| resources | Resources used by the charm | `map(string)` | ```{ "caddy-fileserver-image": "ghcr.io/ubuntu-robotics/ros2bag-fileserver:dev" }``` | no |
+| resources | Resources used by the charm | `map(string)` | ```{ "caddy-fileserver-image": "ghcr.io/ubuntu-robotics/ros2bag-fileserver:track_0" }``` | no |
 | revision | Revision number of the charm | `number` | `null` | no |
 | storage\_directives | Map of storage used by the application. Defaults to 1 GB, allocated by Juju | `map(string)` | `{}` | no |
 | units | Unit count/scale | `number` | `1` | no |
