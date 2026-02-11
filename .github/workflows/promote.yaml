@@ -10,6 +10,11 @@ on:
           - edge -> beta
           - beta -> candidate
           - candidate -> stable
+      track:
+        description: "Track of the charm on which we want the promotion to happen. Defaults to latest."
+        type: string
+        default: 'latest'
+        required: false
 
 jobs:
   promote:
@@ -17,4 +22,5 @@ jobs:
     uses: canonical/observability/.github/workflows/charm-promote.yaml@main
     with:
       promotion: ${{ github.event.inputs.promotion }}
+      track: ${{ github.event.inputs.track }}
     secrets: inherit
