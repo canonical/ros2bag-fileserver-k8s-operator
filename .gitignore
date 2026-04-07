@@ -1,0 +1,25 @@
+# Python bytecode/cache
+__pycache__/
+*.py[cod]
+
+# Packaging artifacts
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtualenvs
+.venv/
+venv/
+
+# Test and tool caches
+.tox/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+
+# Charmcraft artifacts
+cos-tool-*
+*.charm
