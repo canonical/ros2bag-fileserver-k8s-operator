@@ -90,9 +90,7 @@ def charm_file(metadata: Dict[str, Any]) -> str:
         return charm_file_env
 
     try:
-        subprocess.run(
-            ["charmcraft", "pack"], check=True, capture_output=True, text=True
-        )  # nosec B603, B607
+        subprocess.run(["charmcraft", "pack"], check=True, capture_output=True, text=True)
     except subprocess.CalledProcessError as exc:
         raise OSError(f"Error packing charm: {exc}; stderr:\n{exc.stderr}") from None
 

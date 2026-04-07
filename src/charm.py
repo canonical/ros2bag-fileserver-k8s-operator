@@ -36,7 +36,13 @@ from ops.charm import (
     CharmBase,
 )
 from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus, ModelError, OpenedPort, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    MaintenanceStatus,
+    ModelError,
+    OpenedPort,
+    WaitingStatus,
+)
 from ops.pebble import ExecError, Layer
 
 from auth_devices_keys import AuthDevicesKeysConsumer
@@ -257,7 +263,10 @@ class Ros2bagFileserverCharm(CharmBase):
             "job_name": "blackbox_http_2xx",
             "params": {"module": ["http_2xx"]},
             "static_configs": [
-                {"targets": [self.external_url], "labels": {"name": "ros2bag-fileserver"}}
+                {
+                    "targets": [self.external_url],
+                    "labels": {"name": "ros2bag-fileserver"},
+                }
             ],
         }
         return [probe]
