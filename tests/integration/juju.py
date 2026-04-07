@@ -5,7 +5,7 @@
 """Juju/Jubilant integration helpers."""
 
 import json
-from typing import List
+from typing import List, Optional
 
 import jubilant
 
@@ -50,10 +50,41 @@ def relation_application_data(
     return data_items
 
 
-def app_address(juju: jubilant.Juju, app: str) -> str:
-    """Return application address from juju status."""
-    output = juju._cli("status", "--format", "json")
-    if isinstance(output, (tuple, list)):
-        output = output[0]
-    status = json.loads(output)
-    return status["applications"][app]["address"]
+def ingress_url_from_unit(
+    juju: jubilant.Juju,
+    unit: str,
+    endpoint: str,
+    related_endpoint: str,
+) -> str:
+    """Return ingress URL from show-unit relation data."""
+
+    def _extract_url(data: dict) -> Optional[str]:
+        ingress_blob = data.get("ingress")
+        if isinstance(ingress_blob, str) and ingress_blob:
+            try:
+                ingress_data = json.loads(ingress_blob)
+            except json.JSONDecodeError:
+                ingress_data = None
+            if isinstance(ingress_data, dict):
+                ingress_url = ingress_data.get("url")
+                if isinstance(ingress_url, str) and ingress_url:
+                    return ingress_url
+        return None
+
+    unit_data = show_unit(juju, unit)
+    for rel in unit_data.get("relation-info", []):
+        if rel.get("endpoint") != endpoint:
+            continue
+        if rel.get("related-endpoint") != related_endpoint:
+            continue
+        app_data = rel.get("application-data")
+        if isinstance(app_data, dict):
+            app_url = _extract_url(app_data)
+            if app_url:
+                return app_url
+
+    raise RuntimeError(
+        "Could not find ingress url in relation data for "
+        f"unit={unit}, endpoint={endpoint}, related_endpoint={related_endpoint}. "
+        f"unit_data={unit_data}"
+    )

@@ -15,10 +15,12 @@ from tests.integration.constants import (
     BLACKBOX_PROBES_ENDPOINT,
     COS_REGISTRATION_SERVER_APP,
     COS_REGISTRATION_SERVER_AUTH_DEVICES_KEYS_ENDPOINT,
+    COS_REGISTRATION_SERVER_INGRESS_ENDPOINT,
     POSTGRESQL_APP,
     TRAEFIK_APP,
+    TRAEFIK_INGRESS_ENDPOINT,
 )
-from tests.integration.juju import app_address, relation_application_data
+from tests.integration.juju import ingress_url_from_unit, relation_application_data
 
 logger = logging.getLogger(__name__)
 
@@ -79,10 +81,14 @@ def test_blackbox(juju):
 
 def test_auth_devices_keys_propagates_from_cos_registration_server(juju):
     """Add a fake device and verify auth key appears in relation data."""
-    traefik_address = app_address(juju, TRAEFIK_APP)
-    model_name = juju.model.split(":")[-1]
     cos_registration_server_api_url = (
-        f"http://{traefik_address}/{model_name}-{COS_REGISTRATION_SERVER_APP}/api/v1/devices/"
+        ingress_url_from_unit(
+            juju,
+            unit=f"{COS_REGISTRATION_SERVER_APP}/0",
+            endpoint=COS_REGISTRATION_SERVER_INGRESS_ENDPOINT,
+            related_endpoint=TRAEFIK_INGRESS_ENDPOINT,
+        )
+        + "/api/v1/devices/"
     )
     device_uid = "robot-1"
     public_ssh_key = (
