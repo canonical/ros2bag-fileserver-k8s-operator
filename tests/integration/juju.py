@@ -78,10 +78,10 @@ def get_ingress_url_from_unit(
         if rel.get("related-endpoint") != related_endpoint:
             continue
         app_data = rel.get("application-data")
-        if isinstance(app_data, dict):
-            app_url = _extract_url(app_data)
-            if app_url:
-                return app_url
+        if not isinstance(app_data, dict):
+            continue
+        if app_url := _extract_url(app_data):
+            return app_url
 
     raise RuntimeError(
         "Could not find ingress url in relation data for "
