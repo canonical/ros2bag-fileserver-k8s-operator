@@ -50,7 +50,7 @@ def relation_application_data(
     return data_items
 
 
-def ingress_url_from_unit(
+def get_ingress_url_from_unit(
     juju: jubilant.Juju,
     unit: str,
     endpoint: str,

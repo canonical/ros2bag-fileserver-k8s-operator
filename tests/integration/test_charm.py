@@ -20,7 +20,7 @@ from tests.integration.constants import (
     TRAEFIK_APP,
     TRAEFIK_INGRESS_ENDPOINT,
 )
-from tests.integration.juju import ingress_url_from_unit, relation_application_data
+from tests.integration.juju import get_ingress_url_from_unit, relation_application_data
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ def test_blackbox(juju):
 def test_auth_devices_keys_propagates_from_cos_registration_server(juju):
     """Add a fake device and verify auth key appears in relation data."""
     cos_registration_server_api_url = (
-        ingress_url_from_unit(
+        get_ingress_url_from_unit(
             juju,
             unit=f"{COS_REGISTRATION_SERVER_APP}/0",
             endpoint=COS_REGISTRATION_SERVER_INGRESS_ENDPOINT,
