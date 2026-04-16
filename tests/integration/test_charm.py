@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 def wait_for_active_idle_without_error(juju: jubilant.Juju, timeout: int = 60 * 45):
     """Wait for the model to settle without errors."""
     logger.info(f"waiting for the model ({juju.model}) to settle ...")
-    # grafana_agent_app stays in blocked state by design
     juju.wait(
         ready=lambda status: jubilant.all_active(
             status,
