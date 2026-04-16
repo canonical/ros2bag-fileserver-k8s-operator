@@ -80,10 +80,13 @@ def test_blackbox(juju):
 
 def test_auth_devices_keys_propagates_from_cos_registration_server(juju):
     """Add a fake device and verify auth key appears in relation data."""
+
+    cos_registration_server_unit = f"{COS_REGISTRATION_SERVER_APP}/0"
+
     cos_registration_server_api_url = (
         get_ingress_url_from_unit(
             juju,
-            unit=f"{COS_REGISTRATION_SERVER_APP}/0",
+            unit=cos_registration_server_unit,
             endpoint=COS_REGISTRATION_SERVER_INGRESS_ENDPOINT,
             related_endpoint=TRAEFIK_INGRESS_ENDPOINT,
         )
@@ -106,7 +109,6 @@ def test_auth_devices_keys_propagates_from_cos_registration_server(juju):
     assert response.status_code in (200, 201), response.text
 
     app_unit = f"{APP_NAME}/0"
-    cos_registration_server_unit = f"{COS_REGISTRATION_SERVER_APP}/0"
 
     def key_available(_) -> bool:
         relation_entries = relation_application_data(
