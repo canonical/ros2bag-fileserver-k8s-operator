@@ -110,7 +110,7 @@ def test_auth_devices_keys_propagates_from_cos_registration_server(juju):
 
     app_unit = f"{APP_NAME}/0"
 
-    def key_available(_) -> bool:
+    def auth_key_propagated(_) -> bool:
         relation_entries = relation_application_data(
             juju,
             app_unit,
@@ -123,7 +123,7 @@ def test_auth_devices_keys_propagates_from_cos_registration_server(juju):
         payload = relation_entries[0].get("auth_devices_keys", "")
         return device_uid in payload and public_ssh_key in payload
 
-    juju.wait(ready=key_available, delay=5, timeout=300, error=jubilant.any_error)
+    juju.wait(ready=auth_key_propagated, delay=5, timeout=300, error=jubilant.any_error)
 
     relation_data = relation_application_data(
         juju,
