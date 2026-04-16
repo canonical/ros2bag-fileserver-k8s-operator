@@ -25,10 +25,12 @@ from tests.integration.constants import (
     COS_REGISTRATION_SERVER_APP,
     COS_REGISTRATION_SERVER_AUTH_DEVICES_KEYS_ENDPOINT,
     COS_REGISTRATION_SERVER_CHANNEL,
+    COS_REGISTRATION_SERVER_CHARM,
     COS_REGISTRATION_SERVER_DATABASE_ENDPOINT,
     COS_REGISTRATION_SERVER_INGRESS_ENDPOINT,
     POSTGRESQL_APP,
     POSTGRESQL_CHANNEL,
+    POSTGRESQL_CHARM,
     POSTGRESQL_DATABASE_ENDPOINT,
     TRAEFIK_APP,
     TRAEFIK_CHANNEL,
@@ -119,13 +121,13 @@ def app_fixture(juju: jubilant.Juju, metadata: Dict[str, Any], charm_file: str) 
     juju.deploy(TRAEFIK_CHARM, app=TRAEFIK_APP, channel=TRAEFIK_CHANNEL, trust=True)
 
     juju.deploy(
-        COS_REGISTRATION_SERVER_APP,
+        COS_REGISTRATION_SERVER_CHARM,
         app=COS_REGISTRATION_SERVER_APP,
         channel=COS_REGISTRATION_SERVER_CHANNEL,
         trust=True,
     )
     # required by cos-registration-server
-    juju.deploy(POSTGRESQL_APP, app=POSTGRESQL_APP, channel=POSTGRESQL_CHANNEL, trust=True)
+    juju.deploy(POSTGRESQL_CHARM, app=POSTGRESQL_APP, channel=POSTGRESQL_CHANNEL, trust=True)
 
     logger.info(
         "Adding relation: %s:%s and %s:%s",
