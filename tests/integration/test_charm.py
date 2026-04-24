@@ -80,7 +80,6 @@ def test_blackbox(juju):
 
 def test_auth_devices_keys_propagates_from_cos_registration_server(juju):
     """Add a fake device and verify auth key appears in relation data."""
-
     cos_registration_server_unit = f"{COS_REGISTRATION_SERVER_APP}/0"
 
     cos_registration_server_api_url = (
