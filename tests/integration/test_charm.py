@@ -2,89 +2,135 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import logging
-from pathlib import Path
 
-import pytest
+import jubilant
 import requests
-import yaml
-from charmed_kubeflow_chisme.testing.cos_integration import (
-    PROVIDES,
-    _get_app_relation_data,
+
+from tests.integration.constants import (
+    APP_AUTH_DEVICES_KEYS_ENDPOINT,
+    APP_BLACKBOX_ENDPOINT,
+    APP_NAME,
+    BLACKBOX_APP,
+    BLACKBOX_PROBES_ENDPOINT,
+    COS_REGISTRATION_SERVER_APP,
+    COS_REGISTRATION_SERVER_AUTH_DEVICES_KEYS_ENDPOINT,
+    COS_REGISTRATION_SERVER_INGRESS_ENDPOINT,
+    POSTGRESQL_APP,
+    TRAEFIK_APP,
+    TRAEFIK_INGRESS_ENDPOINT,
 )
-from pytest_operator.plugin import OpsTest
+from tests.integration.juju import get_ingress_url_from_unit, relation_application_data
 
 logger = logging.getLogger(__name__)
 
-CHARMCRAFT_YAML = yaml.safe_load(Path("./charmcraft.yaml").read_text())
-APP_NAME = CHARMCRAFT_YAML["name"]
 
-
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest):
-    """Build the charm-under-test and deploy it together with related charms.
-
-    Assert on the unit status before any relations/configurations take place.
-    """
-    # Build and deploy charm from local source folder
-    charm = await ops_test.build_charm(".")
-    resources = {
-        "caddy-fileserver-image": CHARMCRAFT_YAML["resources"]["caddy-fileserver-image"][
-            "upstream-source"
-        ]
-    }
-
-    # Deploy the charm and wait for active/idle status
-    await asyncio.gather(
-        ops_test.model.deploy(charm, resources=resources, application_name=APP_NAME),
-        ops_test.model.wait_for_idle(
-            apps=[APP_NAME], status="active", raise_on_blocked=True, timeout=1000
+def wait_for_active_idle_without_error(juju: jubilant.Juju, timeout: int = 60 * 45):
+    """Wait for the model to settle without errors."""
+    logger.info(f"waiting for the model ({juju.model}) to settle ...")
+    juju.wait(
+        ready=lambda status: jubilant.all_active(
+            status,
+            APP_NAME,
+            BLACKBOX_APP,
+            COS_REGISTRATION_SERVER_APP,
+            POSTGRESQL_APP,
+            TRAEFIK_APP,
+        ),
+        delay=10,
+        timeout=timeout,
+        error=jubilant.any_error,
+    )
+    logger.info("waiting for agents idle ...")
+    juju.wait(
+        jubilant.all_agents_idle,
+        delay=10,
+        timeout=timeout,
+        error=lambda status: jubilant.any_error(
+            status,
+            APP_NAME,
+            BLACKBOX_APP,
+            COS_REGISTRATION_SERVER_APP,
+            POSTGRESQL_APP,
+            TRAEFIK_APP,
         ),
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_connectivity(ops_test: OpsTest):
-    status = await ops_test.model.get_status()
-    address = status.applications[APP_NAME].units[APP_NAME + "/0"].address
-    appurl = f"http://{address}:80/"
-    r = requests.get(appurl)
-    assert r.status_code == 200
+def test_deploy(juju):
+    """Assert deployment of charm-under-test reaches active status."""
+    wait_for_active_idle_without_error(juju)
 
 
-async def test_integrate_blackbox(ops_test: OpsTest):
-    # @todo: upgrade to stable when blackbox charm with probes relation
-    # is promoted from edge.
-    await ops_test.model.deploy(
-        "blackbox-exporter-k8s", "blackbox", channel="1/stable", trust=True
-    )
-
-    logger.info(
-        "Adding relation: %s:%s",
-        APP_NAME,
-        "probes",
-    )
-
-    await ops_test.model.integrate(
-        f"{APP_NAME}",
-        "blackbox:probes",
-    )
-
-    await ops_test.model.wait_for_idle(
-        apps=[
-            f"{APP_NAME}",
-            "blackbox",
-        ],
-        status="active",
-    )
-
-
-async def test_blackbox(ops_test: OpsTest):
+def test_blackbox(juju):
     """Test probes are defined in relation data bag."""
-    app = ops_test.model.applications[APP_NAME]
+    app_unit = f"{APP_NAME}/0"
+    blackbox_unit = f"{BLACKBOX_APP}/0"
+    relation_data = relation_application_data(
+        juju,
+        blackbox_unit,
+        BLACKBOX_PROBES_ENDPOINT,
+        app_unit,
+        APP_BLACKBOX_ENDPOINT,
+    )
+    assert relation_data
+    assert relation_data[0].get("scrape_metadata")
+    assert relation_data[0].get("scrape_probes")
 
-    relation_data = await _get_app_relation_data(app, "probes", side=PROVIDES)
 
-    assert relation_data.get("scrape_metadata")
-    assert relation_data.get("scrape_probes")
+def test_auth_devices_keys_propagates_from_cos_registration_server(juju):
+    """Add a fake device and verify auth key appears in relation data."""
+    cos_registration_server_unit = f"{COS_REGISTRATION_SERVER_APP}/0"
+
+    cos_registration_server_api_url = (
+        get_ingress_url_from_unit(
+            juju,
+            unit=cos_registration_server_unit,
+            endpoint=COS_REGISTRATION_SERVER_INGRESS_ENDPOINT,
+            related_endpoint=TRAEFIK_INGRESS_ENDPOINT,
+        )
+        + "/api/v1/devices/"
+    )
+    device_uid = "robot-1"
+    public_ssh_key = (
+        "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDitestfakekey integration-test@localhost"
+    )
+
+    response = requests.post(
+        cos_registration_server_api_url,
+        json={
+            "uid": device_uid,
+            "address": "10.1.2.3",
+            "public_ssh_key": public_ssh_key,
+        },
+        timeout=30,
+    )
+    assert response.status_code in (200, 201), response.text
+
+    app_unit = f"{APP_NAME}/0"
+
+    def auth_key_propagated(_) -> bool:
+        relation_entries = relation_application_data(
+            juju,
+            app_unit,
+            APP_AUTH_DEVICES_KEYS_ENDPOINT,
+            cos_registration_server_unit,
+            COS_REGISTRATION_SERVER_AUTH_DEVICES_KEYS_ENDPOINT,
+        )
+        if not relation_entries:
+            return False
+        payload = relation_entries[0].get("auth_devices_keys", "")
+        return device_uid in payload and public_ssh_key in payload
+
+    juju.wait(ready=auth_key_propagated, delay=5, timeout=300, error=jubilant.any_error)
+
+    relation_data = relation_application_data(
+        juju,
+        app_unit,
+        APP_AUTH_DEVICES_KEYS_ENDPOINT,
+        cos_registration_server_unit,
+        COS_REGISTRATION_SERVER_AUTH_DEVICES_KEYS_ENDPOINT,
+    )
+    assert relation_data
+    assert device_uid in relation_data[0].get("auth_devices_keys", "")
+    assert public_ssh_key in relation_data[0].get("auth_devices_keys", "")
