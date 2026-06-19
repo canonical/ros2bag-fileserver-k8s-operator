@@ -12,6 +12,11 @@ on:
 
 jobs:
   release:
+    permissions:
+      actions: read
+      contents: write
+      issues: write
+      security-events: write
     uses: canonical/observability/.github/workflows/charm-release.yaml@v0
     # secrets: inherit
     with:
